@@ -179,39 +179,45 @@ export function importJSON(store, json, { mode = 'merge' } = {}) {
 // --- Migration depuis l'ancienne version ------------------------------------
 
 /**
- * ATTENTION : la forme exacte des objets `players` et `games` de la version 1
- * n'a pas pu etre inspectee. Cette fonction est volontairement defensive et
- * DOIT etre completee une fois les vraies donnees sous les yeux.
- * Elle preserve les noms de joueurs et le resume des parties, et ne jette
- * jamais rien : ce qui n'est pas compris part dans `legacyRaw`.
+ * Migration depuis la cle localStorage `dixmille_compagnon_v1` de l'ebauche.
+ *
+ * Forme reelle de l'ancien etat, relevee dans son index.html :
+ *   { version, sound, players:[{id,name,createdAt}], games:[...], activeGame }
+ *
+ * Deux traitements distincts, et c'est deliberé :
+ *
+ * - Les JOUEURS sont repris tels quels. Meme forme, aucune perte. Les
+ *   identifiants existants sont conserves : ils sont references ailleurs dans
+ *   l'archive. Les doublons de nom sont ecartes, l'invariant de addPlayer()
+ *   valant aussi pour les donnees importees.
+ *
+ * - Les PARTIES ne sont PAS converties. L'ancien modele ne connait ni les des
+ *   restants, ni la reprise, ni le dernier tour : les traduire en evenements du
+ *   nouveau moteur reviendrait a inventer des donnees qui n'ont jamais existe,
+ *   et fausserait toutes les statistiques. Elles sont conservees intactes dans
+ *   `legacyArchive`, exportables, jamais rejouees.
+ *
+ * La cle localStorage d'origine n'est jamais effacee — voir idb.js.
  */
 export function migrateLegacy(legacy) {
   const store = emptyStore();
   if (!legacy || typeof legacy !== 'object') return store;
 
   const players = Array.isArray(legacy.players) ? legacy.players : [];
+  const vus = new Set();
   store.players = players
     .map((p) => {
-      const name = typeof p === 'string' ? p : p?.name ?? p?.nom ?? null;
+      const name = typeof p === 'string' ? p.trim() : String(p?.name ?? '').trim();
       if (!name) return null;
-      return { id: p?.id ?? uid(), name: String(name).trim(), createdAt: p?.createdAt ?? null };
+      const cle = name.toLowerCase();
+      if (vus.has(cle)) return null;
+      vus.add(cle);
+      return { id: (typeof p === 'object' && p?.id) || uid(), name, createdAt: p?.createdAt ?? null };
     })
     .filter(Boolean);
 
-  const games = Array.isArray(legacy.games) ? legacy.games : [];
-  store.games = games.map((g) => ({
-    id: g?.id ?? uid(),
-    createdAt: g?.date ?? g?.createdAt ?? null,
-    finishedAt: g?.finishedAt ?? null,
-    order: Array.isArray(g?.order) ? g.order : [],
-    location: g?.location ?? g?.lieu ?? null,
-    events: [],                 // l'ancienne version ne stockait pas d'evenements
-    status: 'FINISHED',
-    winner: g?.winner ?? g?.gagnant ?? null,
-    legacyRaw: g,               // rien n'est jete : tout reste recuperable
-  }));
-
-  store.settings = { sound: legacy.sound !== false, reducedMotion: false };
+  store.games = [];
+  store.legacyArchive = legacy;
   store.migratedFrom = LEGACY_KEY;
   return store;
 }

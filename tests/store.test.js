@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   emptyStore, addPlayer, renamePlayer, startGame, record, getGame,
   replayGame, undoLast, stats, exportJSON, importJSON, migrateLegacy,
-  SCHEMA_VERSION, StoreError,
+  SCHEMA_VERSION, StoreError, LEGACY_KEY,
 } from '../js/store.js';
 
 const throws = (fn) => assert.throws(fn, StoreError);
@@ -194,30 +194,74 @@ test('une structure incomplete est refusee', () => {
 });
 
 // --- Migration --------------------------------------------------------------
+//
+// Les fixtures ci-dessous reproduisent la forme REELLE de l'ancien etat, telle
+// que relevee dans l'index.html de l'ebauche (archive dans docs/archive/).
+// Ne pas les remplacer par des formes inventees : c'est ce qui rendait la
+// version precedente de ces tests verte et sans valeur.
 
-test('la migration preserve les noms de joueurs', () => {
-  const legacy = { version: 1, sound: true, players: [{ id: 'x', name: 'Ana' }, { name: 'Bruno' }], games: [] };
-  const s = migrateLegacy(legacy);
+const LEGACY = {
+  version: 1,
+  sound: true,
+  players: [
+    { id: 'p-ana', name: 'Ana', createdAt: '2026-05-01T18:00:00.000Z' },
+    { id: 'p-bruno', name: 'Bruno', createdAt: '2026-05-01T18:00:10.000Z' },
+  ],
+  games: [
+    {
+      id: 'g-1',
+      startedAt: '2026-05-02T20:00:00.000Z',
+      finishedAt: '2026-05-02T21:10:00.000Z',
+      locationLabel: 'Porto',
+      geo: { lat: 41.1496, lon: -8.611, accuracy: 12 },
+      turnIndex: 0,
+      entryAttempts: 0,
+      winnerId: 'p-ana',
+      abandoned: false,
+      participants: [
+        { playerId: 'p-ana', nameSnapshot: 'Ana', score: 10250, lossSeq: [] },
+        { playerId: 'p-bruno', nameSnapshot: 'Bruno', score: 8900, lossSeq: ['Z'] },
+      ],
+      events: [
+        {
+          id: 'e-1', at: '2026-05-02T20:01:00.000Z', playerId: 'p-ana', playerName: 'Ana',
+          type: 'score', points: 450, penalty: 0, afterScore: 450,
+          before: { turnIndex: 0, entryAttempts: 0, participants: [{ score: 0, lossSeq: [] }, { score: 0, lossSeq: [] }] },
+        },
+      ],
+    },
+  ],
+  activeGame: null,
+};
+
+test('la migration reprend les joueurs a l identique', () => {
+  const s = migrateLegacy(LEGACY);
   assert.deepEqual(s.players.map((p) => p.name), ['Ana', 'Bruno']);
-  assert.equal(s.players[0].id, 'x', 'un identifiant existant est conserve');
-  assert.ok(s.players[1].id, 'un identifiant est genere sinon');
+  assert.equal(s.players[0].id, 'p-ana', 'les identifiants existants sont conserves');
+  assert.equal(s.players[0].createdAt, '2026-05-01T18:00:00.000Z');
+});
+
+test('la migration ne convertit aucune partie mais n en perd aucune', () => {
+  const s = migrateLegacy(LEGACY);
+  assert.deepEqual(s.games, [], 'aucune partie inventee dans le nouveau modele');
+  assert.deepEqual(s.legacyArchive, LEGACY, 'l ancien etat reste integralement recuperable');
+  assert.equal(s.legacyArchive.games[0].events.length, 1, 'les evenements d origine sont intacts');
+  assert.equal(s.migratedFrom, LEGACY_KEY);
+});
+
+test('la migration ecarte les doublons de nom', () => {
+  const s = migrateLegacy({ players: [{ name: 'Ana' }, { name: 'ana' }, { name: 'Bruno' }] });
+  assert.deepEqual(s.players.map((p) => p.name), ['Ana', 'Bruno']);
 });
 
 test('la migration accepte des joueurs sous forme de simples chaines', () => {
   const s = migrateLegacy({ players: ['Ana', 'Bruno'], games: [] });
   assert.equal(s.players.length, 2);
-});
-
-test('la migration ne jette aucune donnee de partie', () => {
-  const g = { date: '2026-01-01', gagnant: 'x', bidule: 42 };
-  const s = migrateLegacy({ players: [], games: [g] });
-  assert.equal(s.games.length, 1);
-  assert.deepEqual(s.games[0].legacyRaw, g, 'tout l original reste recuperable');
-  assert.equal(s.games[0].winner, 'x');
+  assert.ok(s.players[0].id, 'un identifiant est genere quand il manque');
 });
 
 test('la migration survit a des donnees absentes ou corrompues', () => {
-  for (const bad of [null, undefined, {}, { players: 'nope', games: 3 }]) {
+  for (const bad of [null, undefined, {}, { players: 'nope', games: 3 }, { players: [null, '', { name: '  ' }] }]) {
     const s = migrateLegacy(bad);
     assert.equal(s.schema, SCHEMA_VERSION);
     assert.deepEqual(s.players, []);
@@ -225,8 +269,16 @@ test('la migration survit a des donnees absentes ou corrompues', () => {
   }
 });
 
-test('les donnees migrees sont exportables et reimportables', () => {
-  const s = migrateLegacy({ players: ['Ana', 'Bruno'], games: [] });
+test('un etat migre est exportable et reimportable sans perte', () => {
+  const s = migrateLegacy(LEGACY);
   const back = importJSON(emptyStore(), exportJSON(s));
   assert.equal(back.players.length, 2);
+  assert.equal(back.players[0].name, 'Ana');
+});
+
+test('un joueur migre reste utilisable par le reste du store', () => {
+  let s = migrateLegacy(LEGACY);
+  s = startGame(s, s.players.map((p) => p.id), 'Porto');
+  assert.equal(s.games.length, 1, 'une partie demarre avec des joueurs migres');
+  assert.throws(() => addPlayer(s, 'Ana'), StoreError, 'l unicite des noms tient apres migration');
 });
