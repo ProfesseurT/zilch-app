@@ -214,7 +214,11 @@ function rendrePartie() {
 
   $('p-qui').textContent = fini ? 'Partie terminée' : actif.name;
   $('p-total').textContent = fini ? '' : nb(etat.scores[actif.id]);
-  $('p-reste').textContent = fini ? '' : `${nb(view.remaining(etat))} pts avant ${nb(CONFIG.target)}`;
+  const reste = view.remaining(etat);
+  $('p-reste').textContent = fini ? ''
+    : etat.status === 'FINAL_ROUND' ? 'dernier tour'
+    : reste === 0 ? `${nb(CONFIG.target)} atteints`
+    : `${nb(reste)} pts avant le dernier tour`;
 
   const bandeaux = [];
   if (etat.status === 'FINAL_ROUND') {
@@ -265,17 +269,24 @@ async function commande(evenement) {
   const apres = store.replayGame(S, laPartie());
   await sauver();
 
-  // Une penalite est le seul evenement qui fait baisser un score. On la deduit
-  // de la comparaison, sans jamais recalculer le seuil ni le montant.
-  const penalise = apres.scores[joueur.id] < avant.scores[joueur.id];
+  // Le moteur trace chaque penalite. On compare le nombre de traces avant et
+  // apres : aucune regle ici, aucun seuil recalcule. La comparaison des scores
+  // ne suffirait pas — une penalite sur un joueur a zero n'en fait baisser aucun.
+  const nouvelle = apres.penalties.length > avant.penalties.length
+    ? apres.penalties.at(-1) : null;
 
-  if (penalise) { flasher('−1000', '#B4543A'); sonner('PENALTY'); }
+  if (nouvelle) { flasher(`−${nb(nouvelle.nominal)}`, '#B4543A'); sonner('PENALTY'); }
   else if (evenement.type === 'Z') { flasher('Z', '#B4543A'); sonner('Z'); }
   else if (evenement.type === 'Z_PLUS') { flasher('Z+', '#8C4029'); sonner('Z_PLUS'); }
 
   $('points').value = '';
-  dire('m-tour', '');
   rendrePartie();
+  if (nouvelle) {
+    const nom = avant.players.find((p) => p.id === nouvelle.id)?.name ?? '';
+    dire('m-tour', nouvelle.applied < nouvelle.nominal
+      ? `${nom} : pénalité de ${nb(nouvelle.nominal)}, ${nb(nouvelle.applied)} appliqués — le score ne passe pas sous zéro.`
+      : `${nom} : pénalité de ${nb(nouvelle.nominal)} points.`, 'ko');
+  } else dire('m-tour', '');
 }
 
 $('b-valider').onclick = () => {

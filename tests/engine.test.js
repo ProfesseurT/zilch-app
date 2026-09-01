@@ -372,3 +372,19 @@ test('le Z+ reste possible au premier lancer apres un refus de reprise', () => {
   s = decline(s);
   assert.equal(zp(s).punitive.b, 2);
 });
+
+test('chaque penalite laisse une trace, meme appliquee a zero', () => {
+  let s = createGame([{ id: 'a', name: 'Ana' }, { id: 'b', name: 'Bruno' }]);
+  // Ana enchaine trois Z ; son score n'a jamais depasse zero.
+  for (let i = 0; i < 3; i++) {
+    s = apply(s, { type: 'Z' });                 // Ana
+    if (s.status === 'FINISHED') break;
+    s = apply(s, { type: 'SCORE', points: 250, diceLeft: 2 }); // Bruno
+    s = apply(s, { type: 'DECLINE_CARRY' });     // Ana repart de zero
+  }
+  assert.equal(s.penalties.length, 1, 'une seule penalite declenchee');
+  assert.equal(s.penalties[0].id, 'a');
+  assert.equal(s.penalties[0].nominal, CONFIG.penalty);
+  assert.equal(s.penalties[0].applied, 0, 'un joueur a zero ne descend pas sous zero');
+  assert.equal(s.scores.a, 0);
+});

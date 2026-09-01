@@ -59,6 +59,7 @@ function replay(events, players, config) {
     status: 'IN_PROGRESS',
     trigger: null,
     finalRemaining: 0,
+    penalties: [],   // trace de chaque -1000 : {id, nominal, applied}
     winner: null,
     events: [],
   };
@@ -170,7 +171,12 @@ function applyPenalty(s, id) {
   s.punitive[id] = s.config.resetPunitiveToZero
     ? 0
     : s.punitive[id] - s.config.punitiveThreshold;
-  s.lastPenalty = { id, nominal, applied }; // trace pour l'historique
+  // §3.9 : la penalite est un evenement metier a part entiere, avec sa valeur
+  // nominale ET la valeur reellement appliquee. Une penalite sur un joueur a 0
+  // point applique 0 : elle reste un evenement, et l'interface doit l'afficher.
+  const trace = { id, nominal, applied };
+  s.penalties.push(trace);
+  s.lastPenalty = trace;
 }
 
 function finish(s) {

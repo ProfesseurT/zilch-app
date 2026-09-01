@@ -20,7 +20,7 @@ html,body{ height:100% }
 body{
   margin:0; color:var(--encre); font-family:var(--sans); font-size:17px; line-height:1.45;
   background-color:var(--creme);
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='none' stroke='%231B4D8F' stroke-width='1' opacity='.30'%3E%3Cpath d='M30 30Q22 18 30 10Q38 18 30 30Z'/%3E%3Cpath d='M30 30Q22 42 30 50Q38 42 30 30Z'/%3E%3Cpath d='M30 30Q18 22 10 30Q18 38 30 30Z'/%3E%3Cpath d='M30 30Q42 22 50 30Q42 38 30 30Z'/%3E%3Ccircle cx='0' cy='0' r='9'/%3E%3Ccircle cx='60' cy='0' r='9'/%3E%3Ccircle cx='0' cy='60' r='9'/%3E%3Ccircle cx='60' cy='60' r='9'/%3E%3Cpath d='M0 30h6M54 30h6M30 0v6M30 54v6'/%3E%3C/g%3E%3Ccircle cx='30' cy='30' r='2.6' fill='%231B4D8F' opacity='.42'/%3E%3C/svg%3E");
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='none' stroke='%231B4D8F' stroke-width='1.15' opacity='.42'%3E%3Cpath d='M30 30Q22 18 30 10Q38 18 30 30Z'/%3E%3Cpath d='M30 30Q22 42 30 50Q38 42 30 30Z'/%3E%3Cpath d='M30 30Q18 22 10 30Q18 38 30 30Z'/%3E%3Cpath d='M30 30Q42 22 50 30Q42 38 30 30Z'/%3E%3Ccircle cx='0' cy='0' r='9'/%3E%3Ccircle cx='60' cy='0' r='9'/%3E%3Ccircle cx='0' cy='60' r='9'/%3E%3Ccircle cx='60' cy='60' r='9'/%3E%3Cpath d='M0 30h6M54 30h6M30 0v6M30 54v6'/%3E%3C/g%3E%3Ccircle cx='30' cy='30' r='2.6' fill='%231B4D8F' opacity='.42'/%3E%3C/svg%3E");
   background-attachment:fixed;
   padding:calc(var(--hg) + 12px) 14px calc(var(--bs) + 92px);
   overscroll-behavior-y:none;
@@ -53,7 +53,7 @@ button:disabled{ opacity:.34; box-shadow:none; cursor:default }
 button.plein{ background:var(--cobalt); color:var(--blanc); border-color:var(--cobalt-fonce) }
 button.or{ background:var(--or); border-color:#9C7420; color:#2C2005 }
 button.terre{ background:var(--terre); border-color:#8C4029; color:var(--blanc) }
-button.discret{ background:transparent; border-color:var(--creme-ombre); color:var(--gris);
+button.discret{ background:var(--blanc); border-color:var(--creme-ombre); color:var(--gris);
   min-height:48px; font-weight:500 }
 button.geant{ min-height:72px; font-size:20px }
 
