@@ -23,10 +23,17 @@ Aucune installation. Node 18+ suffit, il n'y a pas de `node_modules`.
 
 ## Déployer
 
+Le dépôt est **`zilch-app`**, distinct de l'ancien `Zilch` qui reste en ligne et
+intact. URL publiée : `https://<utilisateur>.github.io/zilch-app/`
+
 1. **Incrémenter la constante de version en tête de `service-worker.js`.**
    Sans ça, le correctif n'atteindra jamais l'iPhone.
-2. `git push` sur la branche servie par GitHub Pages.
-3. L'URL respecte la casse du dépôt : `https://<utilisateur>.github.io/Zilch/`.
+2. Publier la branche `main` depuis GitHub Desktop.
+3. GitHub → Settings → Pages → Source : `main`, dossier `/ (root)`.
+
+Tous les chemins d'assets, du manifest et du service worker sont **relatifs**
+(`./`), jamais absolus : les fichiers servis par GitHub Pages sont sensibles à la
+casse, et un chemin relatif rend la question sans objet.
 
 ## Installer sur iPhone
 
