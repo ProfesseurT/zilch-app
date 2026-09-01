@@ -4,7 +4,7 @@ import {
   emptyStore, addPlayer, renamePlayer, startGame, record, getGame,
   replayGame, undoLast, stats, exportJSON, importJSON, migrateLegacy,
   SCHEMA_VERSION, StoreError,
-} from './store.js';
+} from '../js/store.js';
 
 const throws = (fn) => assert.throws(fn, StoreError);
 

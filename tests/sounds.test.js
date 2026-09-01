@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createPicker, allFiles, SOUND_MANIFEST, SoundError } from './sounds.js';
+import { createPicker, allFiles, SOUND_MANIFEST, SoundError } from '../js/sounds.js';
 
 test('un son tire appartient bien au pool de son evenement', () => {
   const p = createPicker();

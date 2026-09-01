@@ -1,0 +1,9 @@
+{
+  "name": "zilch",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "simulate": "node tests/simulate.js 4000"
+  }
+}

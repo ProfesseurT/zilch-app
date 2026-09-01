@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createGame, apply, undo, view, RuleError, CONFIG } from './engine.js';
+import { createGame, apply, undo, view, RuleError, CONFIG } from '../js/engine.js';
 
 const P = [
   { id: 'a', name: 'Ana' },

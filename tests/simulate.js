@@ -2,7 +2,7 @@
 // le moteur avec des des virtuels, et compare les resultats aux reperes.
 // Ce fichier ne fait pas partie de l'application. Il sert a verifier le moteur.
 
-import { createGame, apply, CONFIG } from './engine.js';
+import { createGame, apply, CONFIG } from '../js/engine.js';
 
 const BAREME = { straight15: 750, straight26: 500 };
 const MAX_LANCERS = 200; // garde-fou : une suite de mains pleines est theoriquement infinie

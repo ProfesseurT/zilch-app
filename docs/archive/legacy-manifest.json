@@ -1,0 +1,25 @@
+{
+  "name": "ZILCH",
+  "short_name": "ZILCH",
+  "description": "Compagnon de partie ZILCH pour iPhone.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8f2e4",
+  "theme_color": "#0b5f9a",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
