@@ -197,3 +197,23 @@ export const view = {
       : null,
   scoreToBeat: (s) => (s.status === 'FINAL_ROUND' ? Math.max(...Object.values(s.scores)) : null),
 };
+
+// ---------------------------------------------------------------------------
+// §3.11 — Bareme des des. DONNEE DE REFERENCE UNIQUEMENT.
+// N'alimente aucun calcul : l'application ne demande jamais la valeur des des.
+// Centralise ici pour ne pas etre disperse, et pret pour un futur module de
+// calcul automatique. Les suites valent 750/500 : c'est la regle maison,
+// differente des baremes francais courants. Ne pas "corriger" sans instruction.
+// ---------------------------------------------------------------------------
+export const DICE_TABLE = [
+  ['Un 1 seul', 100],
+  ['Un 5 seul', 50],
+  ['Trois 1', 1000],
+  ['Trois 2', 200],
+  ['Trois 3', 300],
+  ['Trois 4', 400],
+  ['Trois 5', 500],
+  ['Trois 6', 600],
+  ['Suite 1-2-3-4-5', 750],
+  ['Suite 2-3-4-5-6', 500],
+];
