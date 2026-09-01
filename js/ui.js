@@ -10,6 +10,29 @@ import * as idb from './idb.js';
 import { view, CONFIG, DICE_TABLE } from './engine.js';
 import { createPicker, preload, unlock, play, allFiles } from './sounds.js';
 
+// --- Theme ------------------------------------------------------------------
+// Le choix vit dans le store (donc exporte et reimporte), mais il est aussi
+// recopie dans localStorage : le store se charge en asynchrone, et sans ce
+// raccourci synchrone l'application afficherait un theme puis l'autre.
+
+const THEMES = [
+  { id: 'azulejo', nom: 'Azulejos', teinte: 'linear-gradient(90deg,#1B4D8F 50%,#F5EFE1 50%)' },
+  { id: 'tableau', nom: 'Tableau',  teinte: 'linear-gradient(90deg,#08090A 50%,#FF4A17 50%)' },
+];
+const CLE_THEME = 'zilch.theme';
+
+function poserTheme(id) {
+  const choisi = THEMES.some((t) => t.id === id) ? id : 'azulejo';
+  document.documentElement.dataset.theme = choisi;
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', choisi === 'tableau' ? '#08090A' : '#123A6B');
+  try { localStorage.setItem(CLE_THEME, choisi); } catch { /* mode prive */ }
+  return choisi;
+}
+
+// Applique le theme memorise avant le premier rendu, pour eviter le clignotement.
+try { poserTheme(localStorage.getItem(CLE_THEME)); } catch { poserTheme('azulejo'); }
+
 const $ = (id) => document.getElementById(id);
 const el = (html) => { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstElementChild; };
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -72,7 +95,25 @@ function partieEnCours() {
   return S.games.find((g) => g.status === 'IN_PROGRESS' || g.status === 'FINAL_ROUND') ?? null;
 }
 
+function rendreThemes() {
+  const actuel = document.documentElement.dataset.theme;
+  const root = $('choix-theme');
+  root.innerHTML = '';
+  for (const t of THEMES) {
+    const b = el(`<button aria-pressed="${t.id === actuel}">
+      <span class="apercu" style="background:${t.teinte}"></span>${t.nom}</button>`);
+    b.onclick = async () => {
+      const choisi = poserTheme(t.id);
+      S = { ...S, settings: { ...S.settings, theme: choisi } };
+      await sauver();
+      rendreThemes();
+    };
+    root.append(b);
+  }
+}
+
 function rendreAccueil() {
+  rendreThemes();
   const g = partieEnCours();
   const b = $('b-reprendre');
   b.hidden = !g;
@@ -411,6 +452,9 @@ function rendreStats() {
   try {
     const b = await idb.boot();
     S = b.store;
+    // Le store fait autorite sur le raccourci localStorage : c'est lui qui suit
+    // l'utilisateur a travers un export et un changement de telephone.
+    if (S.settings?.theme) poserTheme(S.settings.theme);
     if (!b.installed) {
       // §8.2 : hors ecran d'accueil, Safari efface tout apres 7 jours.
       $('avert-install').append(el(`<div class="bandeau alerte">

@@ -154,3 +154,130 @@ table.bareme td:last-child{ text-align:right; font-family:var(--serif); font-wei
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{ animation-duration:.001ms !important; transition:none !important }
 }
+
+/* =========================================================================
+   THEME « TABLEAU » — l'oppose exact des azulejos.
+   Pas d'ornement, pas de courbe, pas de creme. Un tableau d'affichage :
+   noir absolu, typographie enorme, un seul orange, angles vifs.
+   Choisi dans l'application, applique par data-theme sur <html>.
+   Ecart assume au §12, qui decrit une identite unique.
+   ========================================================================= */
+
+[data-theme="tableau"]{
+  --noir:#08090A; --panneau:#101215; --trait:#282D33;
+  --texte:#F4F3F0; --faible:#7B828A; --accent:#FF4A17; --signal:#FFD200;
+  --rayon:0px; --ombre:none;
+  --cobalt:var(--accent); --cobalt-fonce:var(--accent); --cobalt-clair:var(--trait);
+  --creme:var(--noir); --creme-ombre:var(--trait); --blanc:var(--panneau);
+  --or:var(--signal); --terre:var(--accent); --vert:#3DD68C;
+  --encre:var(--texte); --gris:var(--faible);
+}
+
+[data-theme="tableau"] body{
+  background-color:var(--noir); background-image:none;
+  font-family:var(--sans); letter-spacing:-.005em;
+}
+
+[data-theme="tableau"] .marque{
+  font-family:var(--sans); font-weight:800; font-size:40px; letter-spacing:-.045em;
+  color:var(--texte); text-align:left; text-transform:uppercase; margin:2px 0 16px;
+  border-bottom:3px solid var(--accent); padding-bottom:10px;
+}
+[data-theme="tableau"] .marque span{
+  text-align:left; letter-spacing:.28em; font-size:10px; color:var(--faible); margin-top:8px;
+}
+
+[data-theme="tableau"] .carte{
+  background:var(--panneau); border:0; border-left:3px solid var(--trait);
+  border-radius:0; box-shadow:none; padding:14px 14px 14px 13px;
+}
+[data-theme="tableau"] h2{ font-family:var(--sans); font-weight:800; text-transform:uppercase;
+  letter-spacing:-.02em; color:var(--texte) }
+[data-theme="tableau"] .legende{ letter-spacing:.2em; color:var(--faible) }
+
+[data-theme="tableau"] button{
+  border-radius:0; box-shadow:none; border:1px solid var(--trait);
+  background:var(--panneau); color:var(--texte);
+  text-transform:uppercase; letter-spacing:.1em; font-size:14px; font-weight:700;
+}
+[data-theme="tableau"] button:active{ transform:none; background:var(--trait) }
+[data-theme="tableau"] button.plein{ background:var(--accent); color:#0A0400; border-color:var(--accent); font-weight:800 }
+[data-theme="tableau"] button.or{ background:var(--signal); color:#191100; border-color:var(--signal); font-weight:800 }
+[data-theme="tableau"] button.terre{ background:transparent; color:var(--accent); border:2px solid var(--accent) }
+[data-theme="tableau"] button.discret{ background:transparent; color:var(--faible); border-color:var(--trait) }
+[data-theme="tableau"] button.geant{ font-size:17px; letter-spacing:.14em }
+
+[data-theme="tableau"] input,[data-theme="tableau"] select{
+  border-radius:0; background:var(--noir); border:1px solid var(--trait); color:var(--texte);
+}
+[data-theme="tableau"] input.geant{
+  font-family:var(--sans); font-weight:800; font-size:52px; letter-spacing:-.05em;
+  font-variant-numeric:tabular-nums; border:0; border-bottom:3px solid var(--accent);
+  background:transparent; min-height:88px;
+}
+[data-theme="tableau"] input::placeholder{ color:#3A4046 }
+
+/* Le bloc du joueur actif devient une plaque orange pleine : impossible de
+   saisir le score du joueur precedent sans le voir. */
+[data-theme="tableau"] .actif-bloc{
+  background:var(--accent); border:0; color:#0A0400; text-align:left; padding:16px 14px;
+}
+[data-theme="tableau"] .actif-bloc .qui{
+  font-family:var(--sans); font-weight:800; font-size:34px; letter-spacing:-.04em;
+  text-transform:uppercase;
+}
+[data-theme="tableau"] .actif-bloc .total{
+  font-family:var(--sans); font-weight:800; font-size:68px; line-height:.92;
+  color:#0A0400; letter-spacing:-.055em; font-variant-numeric:tabular-nums;
+}
+[data-theme="tableau"] .actif-bloc .reste{
+  font-size:11px; text-transform:uppercase; letter-spacing:.18em; opacity:.72; margin-top:6px;
+}
+[data-theme="tableau"] .actif-bloc.change{ animation:plaque .16s steps(2,end) }
+@keyframes plaque{ from{ background:var(--signal) } to{ background:var(--accent) } }
+
+[data-theme="tableau"] .ligne{ border-radius:0; border-bottom:1px solid var(--trait); padding:12px 0 }
+[data-theme="tableau"] .ligne.courant{ background:transparent; box-shadow:none; border-left:3px solid var(--accent); padding-left:9px }
+[data-theme="tableau"] .ligne .nom{ text-transform:uppercase; letter-spacing:.06em; font-weight:700 }
+[data-theme="tableau"] .ligne .pts{
+  font-family:var(--sans); font-weight:800; font-size:30px; color:var(--texte);
+  letter-spacing:-.045em; font-variant-numeric:tabular-nums;
+}
+[data-theme="tableau"] .ligne .serie{ color:var(--accent) }
+
+[data-theme="tableau"] .bandeau{ border-radius:0; border:0; border-left:3px solid; padding:11px 13px }
+[data-theme="tableau"] .bandeau.info{ background:var(--panneau); border-color:var(--faible); color:var(--texte) }
+[data-theme="tableau"] .bandeau.alerte{ background:var(--panneau); border-color:var(--accent); color:var(--texte) }
+[data-theme="tableau"] .bandeau.final{ background:var(--signal); border-color:var(--signal); color:#191100 }
+
+[data-theme="tableau"] .des button{ font-family:var(--sans); font-weight:800; font-size:24px }
+[data-theme="tableau"] .des button[aria-pressed="true"]{ background:var(--accent); color:#0A0400; border-color:var(--accent) }
+
+[data-theme="tableau"] #flash .mot{
+  font-family:var(--sans); font-weight:800; font-size:30vw; letter-spacing:-.06em;
+  color:var(--accent); text-shadow:none;
+}
+
+[data-theme="tableau"] nav{ background:var(--noir); border-top:1px solid var(--trait) }
+[data-theme="tableau"] nav button{ color:var(--faible); text-transform:uppercase; letter-spacing:.1em; border:0 }
+[data-theme="tableau"] nav button[aria-current="page"]{ color:var(--accent) }
+
+[data-theme="tableau"] .puce{ border-radius:0; background:var(--panneau); border:0; border-left:2px solid var(--trait) }
+[data-theme="tableau"] .puce.choisi{ border-left-color:var(--accent); background:var(--panneau) }
+[data-theme="tableau"] .puce .rang{ color:var(--accent); font-family:var(--sans); font-weight:800 }
+[data-theme="tableau"] .kpi b{ font-family:var(--sans); font-weight:800; color:var(--texte) }
+[data-theme="tableau"] table.bareme td:last-child{ font-family:var(--sans); font-weight:800; color:var(--signal) }
+[data-theme="tableau"] .modale{ background:rgba(8,9,10,.86) }
+[data-theme="tableau"] .modale .boite{ border-radius:0; border:0; border-top:4px solid var(--accent); background:var(--panneau) }
+[data-theme="tableau"] .modale .vainqueur{
+  font-family:var(--sans); font-weight:800; font-size:42px; letter-spacing:-.045em;
+  text-transform:uppercase; color:var(--texte);
+}
+
+/* --- Selecteur de theme ------------------------------------------------- */
+
+.themes{ display:grid; grid-template-columns:1fr 1fr; gap:10px }
+.themes button{ min-height:64px; display:flex; flex-direction:column; gap:5px;
+  align-items:center; justify-content:center; font-size:13px }
+.themes button .apercu{ display:block; width:46px; height:12px; border-radius:2px }
+.themes button[aria-pressed="true"]{ outline:3px solid var(--or); outline-offset:-3px }
