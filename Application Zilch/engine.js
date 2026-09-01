@@ -1,0 +1,199 @@
+// ZILCH — moteur metier pur.
+// Aucune dependance, aucun acces au DOM, au stockage ou au reseau.
+// Toute la logique de regles vit ici et nulle part ailleurs.
+
+/** Configuration metier. Aucune valeur magique ailleurs dans le code. */
+export const CONFIG = {
+  target: 10000,          // seuil declenchant le dernier tour
+  minTurn: 250,           // plancher applicable a chaque tour
+  scoreStep: 50,          // tout score est un multiple de 50
+  maxAttempts: 3,         // essais pour atteindre le plancher
+  penalty: 1000,          // penalite
+  punitiveThreshold: 3,   // seuil du compteur punitif
+  zPoints: 1,             // un Z vaut 1 point punitif
+  zPlusPoints: 2,         // un Z+ en vaut 2
+  floorAtZero: true,      // le score ne descend jamais sous zero
+  resetPunitiveToZero: true, // §1 : remise a 0, pas soustraction de 3
+  chainCarryOver: true,   // §1 : la reprise peut s'enchainer
+  triggerWinsTie: true,   // §1 : egalite parfaite -> le declencheur gagne
+  minDiceLeft: 1,         // une main pleine force la relance : jamais 0
+  maxDiceLeft: 4,
+};
+
+export class RuleError extends Error {}
+
+/** Cree une partie. `players` : [{id, name}] dans l'ordre de jeu. */
+export function createGame(players, config = CONFIG) {
+  if (!Array.isArray(players) || players.length < 2) {
+    throw new RuleError('Il faut au moins deux joueurs.');
+  }
+  return replay([], players, config);
+}
+
+/** Applique une commande et renvoie un nouvel etat. L'etat est immuable. */
+export function apply(state, command) {
+  const events = state.events.concat([command]);
+  return replay(events, state.players, state.config);
+}
+
+/** Annule la derniere action en rejouant l'historique amoindri. */
+export function undo(state) {
+  if (state.events.length === 0) return state;
+  return replay(state.events.slice(0, -1), state.players, state.config);
+}
+
+// ---------------------------------------------------------------------------
+// Rejeu integral : une seule source de verite, donc une annulation fiable.
+// ---------------------------------------------------------------------------
+
+function replay(events, players, config) {
+  const s = {
+    config,
+    players,
+    scores: Object.fromEntries(players.map((p) => [p.id, 0])),
+    punitive: Object.fromEntries(players.map((p) => [p.id, 0])),
+    activeIndex: 0,
+    attempts: 0,
+    pending: null,     // {score, dice} laisse par le joueur precedent
+    carryTaken: false, // le tour courant est-il une reprise
+    status: 'IN_PROGRESS',
+    trigger: null,
+    finalRemaining: 0,
+    winner: null,
+    events: [],
+  };
+  for (const e of events) step(s, e);
+  s.events = events;
+  return s;
+}
+
+function activeId(s) {
+  return s.players[s.activeIndex].id;
+}
+
+function step(s, e) {
+  if (s.status === 'FINISHED') throw new RuleError('La partie est terminee.');
+
+  switch (e.type) {
+    case 'TAKE_CARRY': {
+      if (!s.pending) throw new RuleError('Aucun de a reprendre.');
+      if (s.carryTaken) throw new RuleError('Reprise deja choisie pour ce tour.');
+      s.carryTaken = true;
+      return;
+    }
+    case 'DECLINE_CARRY': {
+      if (!s.pending) throw new RuleError('Aucun de a reprendre.');
+      s.pending = null;
+      return;
+    }
+    case 'FAILED_ATTEMPT': {
+      // Un lancer qui rapporte des points mais laisse le joueur sous le plancher.
+      if (s.carryTaken) {
+        throw new RuleError("Les essais ne s'appliquent pas a un tour repris.");
+      }
+      s.attempts += 1;
+      if (s.attempts >= s.config.maxAttempts) endTurn(s, 'Z');
+      return;
+    }
+    case 'SCORE': {
+      validateScore(s, e);
+      const id = activeId(s);
+      s.scores[id] += e.points;
+      s.punitive[id] = 0;
+      const next = { score: e.points, dice: e.diceLeft };
+      endTurn(s, 'SCORE', next);
+      return;
+    }
+    case 'Z':
+      endTurn(s, 'Z');
+      return;
+    case 'Z_PLUS': {
+      // Le Z+ ne sanctionne que le tout premier lancer, a 5 des.
+      if (s.carryTaken) throw new RuleError('Un tour repris ne peut pas produire de Z+.');
+      if (s.attempts > 0) throw new RuleError('Le Z+ ne concerne que le premier lancer.');
+      endTurn(s, 'Z_PLUS');
+      return;
+    }
+    default:
+      throw new RuleError(`Commande inconnue : ${e.type}`);
+  }
+}
+
+function validateScore(s, e) {
+  const { minTurn, scoreStep, minDiceLeft, maxDiceLeft } = s.config;
+  if (!Number.isInteger(e.points)) throw new RuleError('Score non entier.');
+  if (e.points % scoreStep !== 0) {
+    throw new RuleError(`Un score est un multiple de ${scoreStep}.`);
+  }
+  if (e.points < minTurn) throw new RuleError(`Minimum ${minTurn} points.`);
+  if (!Number.isInteger(e.diceLeft) || e.diceLeft < minDiceLeft || e.diceLeft > maxDiceLeft) {
+    throw new RuleError(`Des restants : entre ${minDiceLeft} et ${maxDiceLeft}.`);
+  }
+  if (s.carryTaken && e.points <= s.pending.score) {
+    // §3.7.2 : le repreneur doit lancer au moins une fois, donc ajouter des points.
+    throw new RuleError('Une reprise doit ajouter des points au total herite.');
+  }
+}
+
+function endTurn(s, outcome, nextPending = null) {
+  const id = activeId(s);
+
+  if (outcome === 'Z' || outcome === 'Z_PLUS') {
+    s.punitive[id] += outcome === 'Z' ? s.config.zPoints : s.config.zPlusPoints;
+    if (s.punitive[id] >= s.config.punitiveThreshold) {
+      applyPenalty(s, id);
+    }
+    s.pending = null; // un tour perdu ne laisse aucun de
+  } else {
+    s.pending = s.config.chainCarryOver || !s.carryTaken ? nextPending : null;
+  }
+
+  // Declenchement ou progression du dernier tour.
+  if (s.status === 'FINAL_ROUND') {
+    s.finalRemaining -= 1;
+    if (s.finalRemaining === 0) return finish(s);
+  } else if (s.scores[id] >= s.config.target) {
+    s.status = 'FINAL_ROUND';
+    s.trigger = id;
+    s.finalRemaining = s.players.length - 1;
+  }
+
+  s.activeIndex = (s.activeIndex + 1) % s.players.length;
+  s.attempts = 0;
+  s.carryTaken = false;
+}
+
+function applyPenalty(s, id) {
+  const nominal = s.config.penalty;
+  const applied = s.config.floorAtZero ? Math.min(nominal, s.scores[id]) : nominal;
+  s.scores[id] -= applied;
+  s.punitive[id] = s.config.resetPunitiveToZero
+    ? 0
+    : s.punitive[id] - s.config.punitiveThreshold;
+  s.lastPenalty = { id, nominal, applied }; // trace pour l'historique
+}
+
+function finish(s) {
+  s.status = 'FINISHED';
+  const best = Math.max(...Object.values(s.scores));
+  const tied = s.players.filter((p) => s.scores[p.id] === best).map((p) => p.id);
+  s.winner =
+    tied.length > 1 && s.config.triggerWinsTie && tied.includes(s.trigger)
+      ? s.trigger
+      : tied[0];
+}
+
+// ---------------------------------------------------------------------------
+// Aides de lecture pour l'interface. Aucune logique de regle ici.
+// ---------------------------------------------------------------------------
+
+export const view = {
+  activePlayer: (s) => s.players[s.activeIndex],
+  remaining: (s) => Math.max(0, s.config.target - s.scores[activeId(s)]),
+  attemptsLabel: (s) => `Essai ${Math.min(s.attempts + 1, s.config.maxAttempts)}/${s.config.maxAttempts}`,
+  carryOffer: (s) =>
+    s.pending && !s.carryTaken
+      ? { score: s.pending.score, dice: s.pending.dice }
+      : null,
+  scoreToBeat: (s) => (s.status === 'FINAL_ROUND' ? Math.max(...Object.values(s.scores)) : null),
+};

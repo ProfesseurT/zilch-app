@@ -1,0 +1,2 @@
+{ "name": "zilch-engine", "type": "module", "private": true,
+  "scripts": { "test": "node --test", "simulate": "node simulate.js" } }
