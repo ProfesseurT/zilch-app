@@ -20,6 +20,36 @@ export const SOUND_MANIFEST = {
 
 export class SoundError extends Error {}
 
+// ---------------------------------------------------------------------------
+// UN TOUR = UN SON. JAMAIS DEUX.
+//
+// Plusieurs choses peuvent survenir dans le meme tour : un Z qui declenche la
+// penalite, une penalite sur le tour qui termine la partie. Sans arbitrage on
+// entend deux sons superposes, et le plus important est couvert par le plus
+// banal. L'echelle ci-dessous tranche une fois pour toutes, du plus fort au
+// plus faible. Elle est pure : elle ne connait ni le DOM, ni l'audio, ni le
+// moteur, et elle est testee.
+//
+//   1. VICTORY  — la partie est finie, plus rien d'autre ne compte
+//   2. PENALTY  — le -1000 absorbe le Z ou le Z+ qui l'a declenche
+//   3. Z_PLUS
+//   4. Z
+// ---------------------------------------------------------------------------
+
+export const PRIORITE = ['VICTORY', 'PENALTY', 'Z_PLUS', 'Z'];
+
+/**
+ * Renvoie l'unique evenement sonore d'un tour, ou null s'il n'y a rien a jouer.
+ * @param {{victoire?:boolean, penalite?:boolean, type?:string|null}} tour
+ */
+export function choisirSon({ victoire = false, penalite = false, type = null } = {}) {
+  if (victoire) return 'VICTORY';
+  if (penalite) return 'PENALTY';
+  if (type === 'Z_PLUS') return 'Z_PLUS';
+  if (type === 'Z') return 'Z';
+  return null;
+}
+
 /**
  * Tireur de sons. Ne rejoue jamais deux fois de suite le meme fichier pour un
  * meme evenement, ce qui supprime la repetition immediate, la seule vraiment
@@ -60,6 +90,7 @@ export function allFiles(manifest = SOUND_MANIFEST) {
 const BASE = 'sons/';
 const elements = new Map();
 let unlocked = false;
+let enCours = null;   // canal unique : un seul son audible a la fois
 
 /** Cree les elements et les precharge. A appeler une seule fois au demarrage. */
 export function preload(manifest = SOUND_MANIFEST) {
@@ -102,6 +133,14 @@ export function play(picker, event) {
     const file = picker.pick(event);
     const el = elements.get(file);
     if (!el) return false;
+    // Deuxieme garde-fou, independante de l'echelle de priorite : meme si deux
+    // appels arrivent (double tap, sequence rapide), le son precedent est coupe
+    // net. Jamais deux voix en meme temps autour d'une table.
+    if (enCours && enCours !== el) {
+      enCours.pause();
+      enCours.currentTime = 0;
+    }
+    enCours = el;
     el.currentTime = 0;
     const p = el.play();
     if (p && typeof p.catch === 'function') p.catch(() => {});

@@ -8,7 +8,7 @@
 import * as store from './store.js';
 import * as idb from './idb.js';
 import { view, CONFIG, DICE_TABLE } from './engine.js';
-import { createPicker, preload, unlock, play, allFiles } from './sounds.js';
+import { createPicker, preload, unlock, play, choisirSon } from './sounds.js';
 
 // --- Theme ------------------------------------------------------------------
 // Le choix vit dans le store (donc exporte et reimporte), mais il est aussi
@@ -78,7 +78,10 @@ document.addEventListener('click', async function amorce() {
   try { preload(); audioPret = await unlock(); } catch { audioPret = false; }
 }, { once: true });
 
-const sonner = (evt) => { if (audioPret) play(picker, evt); };
+const sonner = (evt) => { if (evt && audioPret) play(picker, evt); };
+
+const FLASH = { PENALTY: 'var(--terre)', Z: 'var(--terre)', Z_PLUS: 'var(--terre)' };
+let penaliteDuTour = null;   // penalite survenue au tour qui vient d'etre joue
 
 function flasher(mot, couleur) {
   const f = $('flash');
@@ -316,9 +319,21 @@ async function commande(evenement) {
   const nouvelle = apres.penalties.length > avant.penalties.length
     ? apres.penalties.at(-1) : null;
 
-  if (nouvelle) { flasher(`−${nb(nouvelle.nominal)}`, '#B4543A'); sonner('PENALTY'); }
-  else if (evenement.type === 'Z') { flasher('Z', '#B4543A'); sonner('Z'); }
-  else if (evenement.type === 'Z_PLUS') { flasher('Z+', '#8C4029'); sonner('Z_PLUS'); }
+  // UN TOUR = UN SON, ET LE MEME EVENEMENT DECIDE DU FLASH.
+  // L'echelle vit dans sounds.js et elle est testee. Ici on se contente de lui
+  // donner les trois faits du tour ; le son et l'image ne peuvent plus se
+  // contredire, puisqu'ils sortent de la meme decision.
+  const evtSonore = choisirSon({
+    victoire: apres.status === 'FINISHED',
+    penalite: !!nouvelle,
+    type: evenement.type,
+  });
+  penaliteDuTour = nouvelle;          // lue par la modale de victoire
+  sonner(evtSonore);
+  // La victoire n'a pas de flash : la modale est son affichage.
+  if (evtSonore === 'PENALTY') flasher(`−${nb(nouvelle.nominal)}`, FLASH.PENALTY);
+  else if (evtSonore === 'Z_PLUS') flasher('Z+', FLASH.Z_PLUS);
+  else if (evtSonore === 'Z') flasher('Z', FLASH.Z);
 
   $('points').value = '';
   rendrePartie();
@@ -365,11 +380,14 @@ function montrerVainqueur(g, etat) {
   if ($('modale').dataset.pour === g.id) return;
   $('modale').dataset.pour = g.id;
   const nom = etat.players.find((p) => p.id === etat.winner)?.name ?? '?';
-  sonner('VICTORY');
+  // Aucun son ici. Il a deja ete decide par l'echelle de priorite au moment du
+  // dernier coup joue — sinon la fanfare se rejouerait a chaque reouverture de
+  // l'application sur une partie deja terminee.
   const m = el(`<div class="modale"><div class="boite">
     <p class="legende">Victoire</p>
     <div class="vainqueur">${esc(nom)}</div>
     <p>${nb(etat.scores[etat.winner])} points.</p>
+    ${penaliteDuTour ? `<p class="legende">Et une pénalité de ${nb(penaliteDuTour.nominal)} sur le dernier tour.</p>` : ''}
     <button class="or" id="b-sauver-fin">Exporter la sauvegarde</button>
     <button class="discret espace" id="b-fermer-fin">Voir l'historique</button>
   </div></div>`);

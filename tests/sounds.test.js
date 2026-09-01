@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createPicker, allFiles, SOUND_MANIFEST, SoundError } from '../js/sounds.js';
+import { createPicker, allFiles, SOUND_MANIFEST, SoundError, choisirSon, PRIORITE } from '../js/sounds.js';
 
 test('un son tire appartient bien au pool de son evenement', () => {
   const p = createPicker();
@@ -64,4 +64,43 @@ test('la liste des fichiers a precacher couvre tout le manifeste', () => {
   assert.equal(f.length, 13);
   assert.equal(new Set(f).size, f.length, 'aucun doublon');
   assert.ok(f.includes('victoire.mp3'));
+});
+
+// --- Un tour = un son ------------------------------------------------------
+
+test('la victoire couvre tout le reste', () => {
+  assert.equal(choisirSon({ victoire: true, penalite: true, type: 'Z' }), 'VICTORY');
+  assert.equal(choisirSon({ victoire: true, type: 'Z_PLUS' }), 'VICTORY');
+  assert.equal(choisirSon({ victoire: true }), 'VICTORY');
+});
+
+test('la penalite couvre le Z et le Z+ qui l ont declenchee', () => {
+  assert.equal(choisirSon({ penalite: true, type: 'Z' }), 'PENALTY');
+  assert.equal(choisirSon({ penalite: true, type: 'Z_PLUS' }), 'PENALTY');
+});
+
+test('sans victoire ni penalite, le tour parle de lui-meme', () => {
+  assert.equal(choisirSon({ type: 'Z' }), 'Z');
+  assert.equal(choisirSon({ type: 'Z_PLUS' }), 'Z_PLUS');
+});
+
+test('un tour ordinaire ne joue rien', () => {
+  assert.equal(choisirSon({ type: 'SCORE' }), null);
+  assert.equal(choisirSon({ type: 'FAILED_ATTEMPT' }), null);
+  assert.equal(choisirSon({ type: 'TAKE_CARRY' }), null);
+  assert.equal(choisirSon({}), null);
+  assert.equal(choisirSon(), null);
+});
+
+test('chaque son choisi existe au manifeste et l ordre de priorite est complet', () => {
+  for (const e of PRIORITE) {
+    assert.ok(Array.isArray(SOUND_MANIFEST[e]) && SOUND_MANIFEST[e].length,
+      `${e} doit avoir au moins un fichier`);
+  }
+  const produits = new Set([
+    choisirSon({ victoire: true }), choisirSon({ penalite: true }),
+    choisirSon({ type: 'Z_PLUS' }), choisirSon({ type: 'Z' }),
+  ]);
+  assert.deepEqual([...produits].sort(), [...PRIORITE].sort(),
+    'l echelle couvre exactement les evenements sonores du jeu');
 });
