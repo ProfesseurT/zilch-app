@@ -109,6 +109,11 @@ input.geant{ font-family:var(--serif); font-size:34px; text-align:center; font-w
 #flash{ position:fixed; inset:0; display:grid; place-items:center; pointer-events:none;
   z-index:60; opacity:0 }
 #flash.on{ animation:flash 1.05s ease-out forwards }
+/* Animations reduites : le flash reste AFFICHE au lieu de disparaitre.
+   L'animation etant ramenee a 0,001 ms, elle sautait directement a son image
+   finale — opacity 0 — et le Z, le Z+ et le -1000 devenaient invisibles.
+   Une information ne doit jamais dependre d'un mouvement pour exister. */
+#flash.statique{ opacity:1; animation:none }
 #flash .mot{ font-family:var(--serif); font-size:23vw; font-weight:700; color:var(--terre);
   text-shadow:0 6px 26px rgba(0,0,0,.3); letter-spacing:.04em }
 @keyframes flash{ 0%{opacity:0;transform:scale(.7)} 18%{opacity:1;transform:scale(1.04)}

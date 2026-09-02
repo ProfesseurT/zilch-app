@@ -138,6 +138,8 @@ document.addEventListener('click', async function amorce() {
 const sonner = (evt) => { if (evt && audioPret) play(picker, evt); };
 
 const FLASH = { PENALTY: 'var(--terre)', Z: 'var(--terre)', Z_PLUS: 'var(--terre)' };
+const MOUVEMENT_REDUIT = window.matchMedia('(prefers-reduced-motion: reduce)');
+let minuteurFlash = null;
 let penaliteDuTour = null;   // penalite survenue au tour qui vient d'etre joue
 
 function flasher(mot, couleur, nom = '') {
@@ -147,8 +149,18 @@ function flasher(mot, couleur, nom = '') {
   // le monde regarde le grand chiffre rouge et lit le mauvais joueur dessous.
   cible.innerHTML = (nom ? `<span class="nom">${esc(nom)}</span>` : '') + esc(mot);
   cible.style.color = couleur;
-  f.classList.remove('on');
+  f.classList.remove('on', 'statique');
   void f.offsetWidth;              // force le redemarrage de l'animation
+
+  if (MOUVEMENT_REDUIT.matches) {
+    // Pas d'animation : on affiche, on efface au bout du meme temps. Toujours
+    // non bloquant — rien n'attend ce delai, la saisie suivante est deja
+    // possible pendant qu'il court.
+    f.classList.add('statique');
+    clearTimeout(minuteurFlash);
+    minuteurFlash = setTimeout(() => f.classList.remove('statique'), 1050);
+    return;
+  }
   f.classList.add('on');           // non bloquant : rien n'attend sa fin
 }
 
@@ -506,11 +518,18 @@ async function executer(g, evenement) {
   if (evtSonore === 'PENALTY') flasher(`−${nb(nouvelle.nominal)}`, FLASH.PENALTY, joueur.name);
   else if (evtSonore === 'Z_PLUS') flasher('Z+', FLASH.Z_PLUS, joueur.name);
   else if (evtSonore === 'Z') flasher('Z', FLASH.Z, joueur.name);
+  // Le resultat du tour est ecrit noir sur blanc, systematiquement. Le flash et
+  // le son sont des renforts, jamais le seul porteur de l'information : sons
+  // coupes et animations reduites, il resterait sinon un tour sans trace.
   if (nouvelle) {
     const nom = avant.players.find((p) => p.id === nouvelle.id)?.name ?? '';
     dire('m-tour', nouvelle.applied < nouvelle.nominal
       ? `${nom} : pénalité de ${nb(nouvelle.nominal)}, ${nb(nouvelle.applied)} appliqués — le score ne passe pas sous zéro.`
       : `${nom} : pénalité de ${nb(nouvelle.nominal)} points.`, 'ko');
+  } else if (evenement.type === 'Z' || evenement.type === 'Z_PLUS') {
+    dire('m-tour', `${joueur.name} : ${evenement.type === 'Z' ? 'Z' : 'Z+'}. Tour perdu.`, 'ko');
+  } else if (evenement.type === 'SCORE') {
+    dire('m-tour', `${joueur.name} marque ${nb(evenement.points)}.`, 'ok');
   } else dire('m-tour', '');
 }
 
