@@ -292,6 +292,7 @@ function rendrePartie() {
   // Tout reactiver d'abord : le verrou d'action a pu tout desarmer, et seuls
   // les cas ci-dessous doivent rester gris.
   armerBoutons(!actionEnCours);
+  rendreDes();   // sinon un de reste visuellement selectionne apres remise a zero
   $('p-essais').textContent = etat.carryTaken ? 'Tour repris' : view.attemptsLabel(etat);
   $('p-plancher').textContent = etat.carryTaken ? `Plus de ${nb(etat.pending.score)}` : `Minimum ${nb(CONFIG.minTurn)}`;
   // §3.6 : le moteur refuse le Z+ hors de son cas legitime, l'interface le grise.
