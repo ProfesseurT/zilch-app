@@ -19,6 +19,7 @@ export const CONFIG = {
   minDiceLeft: 1,         // une main pleine force la relance : jamais 0
   maxDiceLeft: 4,
 };
+Object.freeze(CONFIG);
 
 export class RuleError extends Error {}
 
@@ -34,6 +35,16 @@ export function createGame(players, config = CONFIG) {
 export function apply(state, command) {
   const events = state.events.concat([command]);
   return replay(events, state.players, state.config);
+}
+
+/**
+ * Rejoue un historique complet en UNE passe.
+ * `apply()` rejoue tout depuis zero a chaque evenement : enchainer 210 appels
+ * coute 22 155 transitions au lieu de 210. Pour reconstruire une partie entiere
+ * — ce que font l'affichage et les statistiques — passer par ici.
+ */
+export function replayAll(events, players, config = CONFIG) {
+  return replay(events, players, config);
 }
 
 /** Annule la derniere action en rejouant l'historique amoindri. */
@@ -60,6 +71,7 @@ function replay(events, players, config) {
     trigger: null,
     finalRemaining: 0,
     penalties: [],   // trace de chaque -1000 : {id, nominal, applied}
+    turns: [],       // un tour termine = une ligne. Voir endTurn().
     winner: null,
     events: [],
   };
@@ -84,6 +96,10 @@ function step(s, e) {
     }
     case 'DECLINE_CARRY': {
       if (!s.pending) throw new RuleError('Aucun de a reprendre.');
+      // Sans ce refus, l'etat devenait carryTaken=true et pending=null, et le
+      // premier score du tour plantait sur une reference nulle : le tour
+      // devenait definitivement injouable. Un double tap suffisait.
+      if (s.carryTaken) throw new RuleError('Reprise deja choisie pour ce tour.');
       s.pending = null;
       return;
     }
@@ -138,6 +154,9 @@ function validateScore(s, e) {
 
 function endTurn(s, outcome, nextPending = null) {
   const id = activeId(s);
+  const penalitesAvant = s.penalties.length;
+  const etaitUneReprise = s.carryTaken;
+  const essaisConsommes = s.attempts;
 
   if (outcome === 'Z' || outcome === 'Z_PLUS') {
     s.punitive[id] += outcome === 'Z' ? s.config.zPoints : s.config.zPlusPoints;
@@ -148,6 +167,8 @@ function endTurn(s, outcome, nextPending = null) {
   } else {
     s.pending = s.config.chainCarryOver || !s.carryTaken ? nextPending : null;
   }
+
+  inscrireTour(s, id, outcome, nextPending, penalitesAvant, etaitUneReprise, essaisConsommes);
 
   // Declenchement ou progression du dernier tour.
   if (s.status === 'FINAL_ROUND') {
@@ -162,6 +183,23 @@ function endTurn(s, outcome, nextPending = null) {
   s.activeIndex = (s.activeIndex + 1) % s.players.length;
   s.attempts = 0;
   s.carryTaken = false;
+}
+
+// §7 : le moteur est le seul a savoir qu'un tour se termine et a qui il
+// appartient — un 3e essai rate termine le tour sans qu'aucune commande ne le
+// dise. Il l'inscrit donc ici, une fois. Les statistiques n'ont plus qu'a
+// compter ces lignes. Toute autre facon de recompter les tours diverge du
+// moteur : c'est exactement ce qui rendait les statistiques fausses.
+function inscrireTour(s, id, outcome, nextPending, penalitesAvant, reprise, essais) {
+  s.turns.push({
+    playerId: id,
+    outcome,                                          // 'SCORE' | 'Z' | 'Z_PLUS'
+    points: outcome === 'SCORE' ? nextPending?.score ?? 0 : 0,
+    diceLeft: outcome === 'SCORE' ? nextPending?.dice ?? null : null,
+    carry: reprise,
+    attempts: essais,
+    penalty: s.penalties.length > penalitesAvant ? s.penalties.at(-1) : null,
+  });
 }
 
 function applyPenalty(s, id) {
@@ -181,6 +219,7 @@ function applyPenalty(s, id) {
 
 function finish(s) {
   s.status = 'FINISHED';
+  s.pending = null;   // plus personne ne joue : il n'y a plus rien a reprendre
   const best = Math.max(...Object.values(s.scores));
   const tied = s.players.filter((p) => s.scores[p.id] === best).map((p) => p.id);
   s.winner =

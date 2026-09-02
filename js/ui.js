@@ -42,7 +42,10 @@ const quand = (iso) => { try { return new Intl.DateTimeFormat('fr-FR', { dateSty
 const picker = createPicker();
 let S = null;            // le store persiste
 let partieId = null;     // partie affichee dans l'ecran de partie
-let desChoisis = 2;      // des laisses, defaut raisonnable (§17 : 1 et 2 dominent)
+// Aucun defaut. Une valeur collante d'un tour sur l'autre paraissait deja
+// repondue, donc on sautait l'etape : elle n'etait juste que 45 % du temps par
+// hasard, et le joueur suivant se voyait proposer une reprise fausse.
+let desChoisis = null;
 let audioPret = false;
 let dernierActif = null; // pour n'animer la bascule que quand le joueur change
 
@@ -226,12 +229,19 @@ function laPartie() {
   return g ?? null;
 }
 
+// Valider reste inerte tant que les des restants n'ont pas ete designes.
+function majValider() {
+  const b = $('b-valider');
+  b.disabled = desChoisis === null;
+  b.textContent = desChoisis === null ? 'Combien de dés restent ?' : 'Valider';
+}
+
 function rendreDes() {
   const root = $('choix-des');
   root.innerHTML = '';
   for (let n = CONFIG.minDiceLeft; n <= CONFIG.maxDiceLeft; n++) {
     const b = el(`<button aria-pressed="${n === desChoisis}">${n}</button>`);
-    b.onclick = () => { desChoisis = n; rendreDes(); };
+    b.onclick = () => { desChoisis = n; rendreDes(); majValider(); };
     root.append(b);
   }
 }
@@ -279,12 +289,16 @@ function rendrePartie() {
   }
   $('bloc-saisie').hidden = !!offre || fini;
 
+  // Tout reactiver d'abord : le verrou d'action a pu tout desarmer, et seuls
+  // les cas ci-dessous doivent rester gris.
+  armerBoutons(!actionEnCours);
   $('p-essais').textContent = etat.carryTaken ? 'Tour repris' : view.attemptsLabel(etat);
   $('p-plancher').textContent = etat.carryTaken ? `Plus de ${nb(etat.pending.score)}` : `Minimum ${nb(CONFIG.minTurn)}`;
   // §3.6 : le moteur refuse le Z+ hors de son cas legitime, l'interface le grise.
   $('b-zplus').disabled = etat.attempts > 0 || etat.carryTaken;
   $('b-essai').disabled = etat.carryTaken;
-  $('b-annuler').disabled = g.events.length === 0;
+  $('b-annuler').disabled = g.events.length === 0 || actionEnCours;
+  majValider();
 
   $('tableau').innerHTML = etat.players.map((p) => {
     const pun = etat.punitive[p.id];
@@ -299,9 +313,30 @@ function rendrePartie() {
 
 // Toute action de jeu passe par ici. Un seul chemin, donc un seul endroit ou
 // se tromper — et aucune regle : le moteur accepte ou refuse.
+const BOUTONS_JEU = ['b-valider', 'b-essai', 'b-z', 'b-zplus', 'b-reprendre-des', 'b-zero', 'b-annuler'];
+let actionEnCours = false;   // verrou : un tap = une action, jamais deux
+
+function armerBoutons(actifs) {
+  for (const id of BOUTONS_JEU) { const b = $(id); if (b) b.disabled = !actifs; }
+}
+
 async function commande(evenement) {
   const g = laPartie();
   if (!g) return;
+  // Sans ce verrou, un second tap — le reflexe quand rien ne semble se passer —
+  // enregistrait un deuxieme tour, souvent au nom du joueur suivant.
+  if (actionEnCours) return;
+  actionEnCours = true;
+  armerBoutons(false);
+  try {
+    await executer(g, evenement);
+  } finally {
+    actionEnCours = false;
+    rendrePartie();          // reetablit l'etat exact des boutons
+  }
+}
+
+async function executer(g, evenement) {
   const avant = store.replayGame(S, g);
   const joueur = view.activePlayer(avant);
   try {
@@ -336,6 +371,7 @@ async function commande(evenement) {
   else if (evtSonore === 'Z') flasher('Z', FLASH.Z);
 
   $('points').value = '';
+  if (evenement.type === 'SCORE') desChoisis = null;   // choix explicite au tour suivant
   rendrePartie();
   if (nouvelle) {
     const nom = avant.players.find((p) => p.id === nouvelle.id)?.name ?? '';
@@ -346,6 +382,7 @@ async function commande(evenement) {
 }
 
 $('b-valider').onclick = () => {
+  if (desChoisis === null) return dire('m-tour', 'Choisis combien de dés restent sur la table.', 'ko');
   const v = $('points').value.trim();
   if (v === '') return dire('m-tour', 'Saisis un score.', 'ko');
   commande({ type: 'SCORE', points: Number(v), diceLeft: desChoisis });
@@ -357,23 +394,45 @@ $('b-zplus').onclick = () => commande({ type: 'Z_PLUS' });
 $('b-reprendre-des').onclick = () => commande({ type: 'TAKE_CARRY' });
 $('b-zero').onclick = () => commande({ type: 'DECLINE_CARRY' });
 
-$('b-annuler').onclick = async () => {
+async function annuler() {
   const g = laPartie();
-  if (!g) return;
-  S = store.undoLast(S, g.id);   // rejeu integral, jamais une soustraction
-  await sauver();
-  $('modale').innerHTML = '';
-  rendrePartie();
-  dire('m-tour', 'Dernière action annulée.', 'ok');
-};
+  if (!g || actionEnCours) return;
+  actionEnCours = true;
+  armerBoutons(false);
+  try {
+    S = store.undoLast(S, g.id);   // rejeu integral, jamais une soustraction
+    await sauver();
+    $('modale').innerHTML = '';
+    $('modale').dataset.pour = '';
+    desChoisis = null;
+    dire('m-tour', 'Dernière action annulée.', 'ok');
+  } finally {
+    actionEnCours = false;
+    rendrePartie();
+  }
+}
+$('b-annuler').onclick = annuler;
 
-$('b-abandon').onclick = async () => {
+$('b-abandon').onclick = () => {
   const g = laPartie();
   if (!g) return;
-  S = { ...S, games: S.games.map((x) => (x.id === g.id ? { ...x, status: 'ABANDONED', finishedAt: new Date().toISOString() } : x)) };
-  await sauver();
-  partieId = null;
-  aller('historique');
+  // Un pouce imprecis au tour 60 effacait la soiree sans un mot.
+  const m = el(`<div class="modale"><div class="boite">
+    <p class="legende">Arrêter la partie</p>
+    <p>La partie sera archivée telle quelle. Tu ne pourras plus la reprendre.</p>
+    <button class="terre" id="b-abandon-oui">Oui, arrêter</button>
+    <button class="discret espace" id="b-abandon-non">Continuer à jouer</button>
+  </div></div>`);
+  $('modale').innerHTML = '';
+  $('modale').append(m);
+  $('b-abandon-non').onclick = () => { $('modale').innerHTML = ''; };
+  $('b-abandon-oui').onclick = async () => {
+    S = { ...S, games: S.games.map((x) => (x.id === g.id ? { ...x, status: 'ABANDONED', finishedAt: new Date().toISOString() } : x)) };
+    await sauver();
+    $('modale').innerHTML = '';
+    partieId = null;
+    aller('historique');
+  };
 };
 
 function montrerVainqueur(g, etat) {
@@ -389,12 +448,16 @@ function montrerVainqueur(g, etat) {
     <p>${nb(etat.scores[etat.winner])} points.</p>
     ${penaliteDuTour ? `<p class="legende">Et une pénalité de ${nb(penaliteDuTour.nominal)} sur le dernier tour.</p>` : ''}
     <button class="or" id="b-sauver-fin">Exporter la sauvegarde</button>
+    <button class="discret espace" id="b-annuler-fin">Annuler le dernier tour</button>
     <button class="discret espace" id="b-fermer-fin">Voir l'historique</button>
   </div></div>`);
   $('modale').innerHTML = '';
   $('modale').append(m);
   // §8.2 : l'export est propose a la fin de chaque partie, refusable en un tap.
   $('b-sauver-fin').onclick = () => { idb.downloadBackup(store.exportJSON(S)); };
+  // Sans ce bouton, un score mal tape au dernier tour terminait la partie sans
+  // aucun retour possible : la modale couvrait le seul bouton Annuler.
+  $('b-annuler-fin').onclick = annuler;
   $('b-fermer-fin').onclick = () => { $('modale').innerHTML = ''; partieId = null; aller('historique'); };
 }
 
@@ -467,6 +530,7 @@ function rendreStats() {
 (async function demarrer() {
   $('bareme').innerHTML = DICE_TABLE.map(([nom, pts]) => `<tr><td>${esc(nom)}</td><td>${nb(pts)}</td></tr>`).join('');
   rendreDes();
+  majValider();
   try {
     const b = await idb.boot();
     S = b.store;

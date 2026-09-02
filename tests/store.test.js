@@ -282,3 +282,88 @@ test('un joueur migre reste utilisable par le reste du store', () => {
   assert.equal(s.games.length, 1, 'une partie demarre avec des joueurs migres');
   assert.throws(() => addPlayer(s, 'Ana'), StoreError, 'l unicite des noms tient apres migration');
 });
+
+// --- Statistiques (regression : tours attribues au mauvais joueur) ----------
+
+function partieAvecZauto() {
+  // Ana rate 3 essais (Z automatique), Bruno marque, Ana marque, Bruno perd.
+  let s = emptyStore();
+  s = addPlayer(s, 'Ana');
+  s = addPlayer(s, 'Bruno');
+  const [ana, bruno] = s.players.map((p) => p.id);
+  s = startGame(s, [ana, bruno]);
+  const g = s.games.at(-1).id;
+  for (const e of [
+    { type: 'FAILED_ATTEMPT' }, { type: 'FAILED_ATTEMPT' }, { type: 'FAILED_ATTEMPT' },
+    { type: 'SCORE', points: 700, diceLeft: 2 },   // Bruno
+    { type: 'TAKE_CARRY' },                        // Ana reprend
+    { type: 'SCORE', points: 900, diceLeft: 1 },   // Ana
+    { type: 'DECLINE_CARRY' },                     // Bruno repart de zero
+    { type: 'Z' },                                 // Bruno
+  ]) s = record(s, g, e);
+  return { s, ana, bruno };
+}
+
+test('les tours ne sont plus attribues au mauvais joueur apres un Z automatique', () => {
+  const { s, ana, bruno } = partieAvecZauto();
+  const a = stats(s, ana);
+  const b = stats(s, bruno);
+  assert.equal(a.turns, 2, 'Ana : son Z automatique et son tour a 900');
+  assert.equal(a.z, 1);
+  assert.equal(a.bestTurn, 900, 'le meilleur tour d Ana lui appartient');
+  assert.equal(a.carryTaken, 1);
+  assert.equal(a.carryWon, 1);
+  assert.equal(b.turns, 2, 'Bruno : son tour a 700 et son Z');
+  assert.equal(b.z, 1);
+  assert.equal(b.bestTurn, 700);
+  assert.equal(b.carryTaken, 0);
+});
+
+test('les statistiques comptent les penalites', () => {
+  let s = emptyStore();
+  s = addPlayer(s, 'Ana');
+  s = addPlayer(s, 'Bruno');
+  const [ana, bruno] = s.players.map((p) => p.id);
+  s = startGame(s, [ana, bruno]);
+  const g = s.games.at(-1).id;
+  // Ana : Z, Z, Z+ -> 1+1+2 = 4, penalite au troisieme.
+  for (const e of [
+    { type: 'Z' }, { type: 'SCORE', points: 250, diceLeft: 2 }, { type: 'DECLINE_CARRY' },
+    { type: 'Z' }, { type: 'SCORE', points: 250, diceLeft: 2 }, { type: 'DECLINE_CARRY' },
+    { type: 'Z_PLUS' },
+  ]) s = record(s, g, e);
+  assert.equal(stats(s, ana).penalties, 1);
+  assert.equal(stats(s, ana).z, 2);
+  assert.equal(stats(s, ana).zPlus, 1);
+  assert.equal(stats(s, bruno).penalties, 0);
+});
+
+test('la moyenne d un tour positif ignore la penalite', () => {
+  let s = emptyStore();
+  s = addPlayer(s, 'Ana');
+  s = addPlayer(s, 'Bruno');
+  const [ana, bruno] = s.players.map((p) => p.id);
+  s = startGame(s, [ana, bruno]);
+  const g = s.games.at(-1).id;
+  for (const e of [
+    { type: 'SCORE', points: 3000, diceLeft: 2 },   // Ana : un seul tour positif
+    { type: 'DECLINE_CARRY' }, { type: 'Z' },       // Bruno
+    { type: 'Z' },                                  // Ana
+    { type: 'Z' },                                  // Bruno
+    { type: 'Z' },                                  // Ana
+    { type: 'Z' },                                  // Bruno
+    { type: 'Z' },                                  // Ana : 3e Z -> penalite
+  ]) s = record(s, g, e);
+  const a = stats(s, ana);
+  assert.equal(a.penalties, 1);
+  assert.equal(a.positiveTurns, 1);
+  assert.equal(a.bestTurn, 3000);
+  assert.equal(a.avgPositiveTurn, 3000, 'le tour valait 3000, la penalite est venue apres');
+});
+
+test('les tours d une partie inachevee comptent quand meme', () => {
+  const { s, ana } = partieAvecZauto();     // partie toujours IN_PROGRESS
+  const a = stats(s, ana);
+  assert.equal(a.games, 0, 'aucune partie terminee');
+  assert.equal(a.turns, 2, 'mais ses tours existent');
+});

@@ -3,7 +3,7 @@
 // migration et d'export vit ici, donc elle est testable sans navigateur.
 // L'adaptateur IndexedDB (idb.js) se contente de charger et sauver ce contenu.
 
-import { createGame, apply, CONFIG } from './engine.js';
+import { createGame, apply, replayAll } from './engine.js';
 
 export const SCHEMA_VERSION = 2;
 export const LEGACY_KEY = 'dixmille_compagnon_v1';
@@ -85,7 +85,10 @@ export function replayGame(store, game) {
     id,
     name: store.players.find((p) => p.id === id)?.name ?? '?',
   }));
-  return game.events.reduce((s, e) => apply(s, e), createGame(players));
+  // Une seule passe. L'ancienne version enchainait un apply() par evenement,
+  // chacun rejouant tout depuis zero : 22 155 transitions pour une partie de
+  // 105 tours au lieu de 210, et l'ecran Stats les payait pour chaque joueur.
+  return replayAll(game.events, players);
 }
 
 /** Annule la derniere action d'une partie. */
@@ -101,42 +104,57 @@ export function undoLast(store, gameId) {
 
 // --- Statistiques : toujours recalculees, jamais stockees --------------------
 
+/**
+ * Statistiques d'un joueur. Elles ne sont jamais stockees : elles se
+ * recalculent depuis les evenements, comme l'exige le §7.
+ *
+ * Cette fonction NE DECIDE PLUS a qui appartient un tour. C'est le moteur qui
+ * l'inscrit dans `state.turns`, parce qu'il est le seul a savoir qu'un 3e essai
+ * rate termine un tour. La version precedente refaisait ce calcul de son cote,
+ * l'ignorait, et attribuait tout le reste de la partie au mauvais joueur.
+ */
 export function stats(store, playerId) {
   const s = {
-    games: 0, wins: 0, turns: 0, positiveTurns: 0, points: 0,
+    games: 0, wins: 0, turns: 0, positiveTurns: 0, points: 0, turnPoints: 0,
     bestTurn: 0, z: 0, zPlus: 0, penalties: 0, carryTaken: 0, carryWon: 0,
   };
+
   for (const game of store.games) {
     if (!game.order.includes(playerId)) continue;
-    if (game.status !== 'FINISHED') continue;
-    s.games += 1;
-    if (game.winner === playerId) s.wins += 1;
-
     const state = replayGame(store, game);
-    s.points += state.scores[playerId] ?? 0;
 
-    let idx = 0;
-    let carry = false;
-    for (const e of game.events) {
-      const current = game.order[idx];
-      if (e.type === 'TAKE_CARRY') { if (current === playerId) { s.carryTaken += 1; carry = true; } continue; }
-      if (e.type === 'DECLINE_CARRY' || e.type === 'FAILED_ATTEMPT') continue;
-      if (current === playerId) {
-        s.turns += 1;
-        if (e.type === 'SCORE') {
-          s.positiveTurns += 1;
-          s.bestTurn = Math.max(s.bestTurn, e.points);
-          if (carry) s.carryWon += 1;
-        } else if (e.type === 'Z') s.z += CONFIG.zPoints && 1;
-        else if (e.type === 'Z_PLUS') s.zPlus += 1;
+    // Le rejeu fait foi, pas le statut recopie sur la partie.
+    if (state.status === 'FINISHED') {
+      s.games += 1;
+      if (state.winner === playerId) s.wins += 1;
+      s.points += state.scores[playerId] ?? 0;
+    }
+
+    // Les tours, eux, comptent meme dans une partie inachevee ou arretee :
+    // le §7 demande le nombre TOTAL de tours, de Z et de Z+.
+    for (const t of state.turns) {
+      if (t.playerId !== playerId) continue;
+      s.turns += 1;
+      if (t.carry) s.carryTaken += 1;
+      if (t.penalty) s.penalties += 1;
+      if (t.outcome === 'SCORE') {
+        s.positiveTurns += 1;
+        s.turnPoints += t.points;
+        s.bestTurn = Math.max(s.bestTurn, t.points);
+        if (t.carry) s.carryWon += 1;
+      } else if (t.outcome === 'Z') {
+        s.z += 1;
+      } else if (t.outcome === 'Z_PLUS') {
+        s.zPlus += 1;
       }
-      carry = false;
-      idx = (idx + 1) % game.order.length;
     }
   }
+
   s.winRate = s.games ? s.wins / s.games : 0;
   s.avgScore = s.games ? Math.round(s.points / s.games) : 0;
-  s.avgPositiveTurn = s.positiveTurns ? Math.round(s.points / s.positiveTurns) : 0;
+  // Moyenne des tours positifs, pas du score final : la penalite ne doit pas
+  // faire baisser la moyenne d'un tour qu'elle n'a pas touche.
+  s.avgPositiveTurn = s.positiveTurns ? Math.round(s.turnPoints / s.positiveTurns) : 0;
   return s;
 }
 

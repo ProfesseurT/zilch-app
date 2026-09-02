@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createGame, apply, undo, view, RuleError, CONFIG } from '../js/engine.js';
+import { createGame, apply, undo, view, RuleError, CONFIG, replayAll } from '../js/engine.js';
 
 const P = [
   { id: 'a', name: 'Ana' },
@@ -387,4 +387,56 @@ test('chaque penalite laisse une trace, meme appliquee a zero', () => {
   assert.equal(s.penalties[0].nominal, CONFIG.penalty);
   assert.equal(s.penalties[0].applied, 0, 'un joueur a zero ne descend pas sous zero');
   assert.equal(s.scores.a, 0);
+});
+
+// --- Le moteur inscrit les tours (regression : statistiques echangees) -------
+
+test('un Z automatique au 3e essai est inscrit comme un tour du bon joueur', () => {
+  let s = createGame([{ id: 'a', name: 'Ana' }, { id: 'b', name: 'Bruno' }]);
+  s = apply(s, { type: 'FAILED_ATTEMPT' });
+  s = apply(s, { type: 'FAILED_ATTEMPT' });
+  s = apply(s, { type: 'FAILED_ATTEMPT' });   // 3e essai : Z automatique
+  assert.equal(s.turns.length, 1, 'le tour est inscrit sans commande explicite');
+  assert.equal(s.turns[0].playerId, 'a');
+  assert.equal(s.turns[0].outcome, 'Z');
+  assert.equal(s.turns[0].attempts, 3);
+  assert.equal(s.players[s.activeIndex].id, 'b', 'et la main passe bien a Bruno');
+});
+
+test('chaque tour inscrit son proprietaire, son resultat et ses points', () => {
+  let s = createGame([{ id: 'a', name: 'Ana' }, { id: 'b', name: 'Bruno' }]);
+  s = apply(s, { type: 'SCORE', points: 450, diceLeft: 2 });
+  s = apply(s, { type: 'TAKE_CARRY' });
+  s = apply(s, { type: 'SCORE', points: 700, diceLeft: 1 });
+  s = apply(s, { type: 'Z_PLUS' });
+  assert.deepEqual(s.turns.map((t) => [t.playerId, t.outcome, t.points, t.carry]), [
+    ['a', 'SCORE', 450, false],
+    ['b', 'SCORE', 700, true],
+    ['a', 'Z_PLUS', 0, false],
+  ]);
+});
+
+test('refuser la reprise apres l avoir prise est refuse, pas un plantage', () => {
+  let s = createGame([{ id: 'a', name: 'Ana' }, { id: 'b', name: 'Bruno' }]);
+  s = apply(s, { type: 'SCORE', points: 450, diceLeft: 2 });
+  s = apply(s, { type: 'TAKE_CARRY' });
+  assert.throws(() => apply(s, { type: 'DECLINE_CARRY' }), RuleError);
+  // et le tour reste jouable
+  const suite = apply(s, { type: 'SCORE', points: 700, diceLeft: 1 });
+  assert.equal(suite.scores.b, 700);
+});
+
+test('une partie terminee ne laisse aucun de a reprendre', () => {
+  let s = createGame([{ id: 'a', name: 'Ana' }, { id: 'b', name: 'Bruno' }]);
+  s = apply(s, { type: 'SCORE', points: 10000, diceLeft: 3 });  // declenche
+  s = apply(s, { type: 'DECLINE_CARRY' });
+  s = apply(s, { type: 'SCORE', points: 250, diceLeft: 4 });    // dernier tour
+  assert.equal(s.status, 'FINISHED');
+  assert.equal(s.pending, null);
+  assert.equal(view.carryOffer(s), null);
+});
+
+test('CONFIG est fige : personne ne peut changer les regles de l exterieur', () => {
+  assert.throws(() => { 'use strict'; CONFIG.minTurn = 300; }, TypeError);
+  assert.equal(CONFIG.minTurn, 250);
 });

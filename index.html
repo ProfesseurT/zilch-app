@@ -67,6 +67,8 @@
     <div class="reste" id="p-reste"></div>
   </div>
 
+  <button class="discret" id="b-annuler">Annuler le dernier tour</button>
+
   <div id="bloc-reprise" hidden>
     <div class="carte serree">
       <p class="legende" id="reprise-texte"></p>
@@ -80,11 +82,11 @@
   <div id="bloc-saisie">
     <div class="carte">
       <div class="essais"><span id="p-essais">Essai 1/3</span><span id="p-plancher">Minimum 250</span></div>
-      <input id="points" class="geant" type="number" inputmode="numeric" pattern="[0-9]*"
-             step="50" min="250" placeholder="0" enterkeyhint="done">
-      <p class="legende espace">Dés laissés sur la table</p>
+      <p class="legende">Dés laissés sur la table</p>
       <div class="des" id="choix-des"></div>
-      <button class="plein geant espace" id="b-valider">Valider</button>
+      <input id="points" class="geant espace" type="number" inputmode="numeric" pattern="[0-9]*"
+             step="50" placeholder="0" enterkeyhint="done">
+      <button class="plein geant" id="b-valider">Valider</button>
       <div class="msg" id="m-tour"></div>
     </div>
 
@@ -100,10 +102,7 @@
     <div class="tableau" id="tableau"></div>
   </div>
 
-  <div class="duo">
-    <button class="discret" id="b-annuler">Annuler</button>
-    <button class="discret" id="b-abandon">Arrêter la partie</button>
-  </div>
+  <button class="discret" id="b-abandon">Arrêter la partie</button>
 </div>
 
 <!-- HISTORIQUE --------------------------------------------------------- -->
