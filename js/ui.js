@@ -40,6 +40,14 @@ const nb = (n) => Number(n || 0).toLocaleString('fr-FR');
 const quand = (iso) => { try { return new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso)); } catch { return iso; } };
 
 const picker = createPicker();
+
+// Garde-fou de SAISIE, pas une regle du jeu : le moteur n'a et ne doit avoir
+// aucun plafond (§6). Au-dela d'environ quatre fois le score moyen d'un tour
+// valide (~540 pts, §17), un chiffre de trop est plus probable qu'un exploit,
+// et il peut declencher le dernier tour par accident. On demande confirmation,
+// on ne bride rien.
+const SEUIL_CONFIRMATION = 2000;
+let scoreAConfirmer = null;
 let S = null;            // le store persiste
 let partieId = null;     // partie affichee dans l'ecran de partie
 // Aucun defaut. Une valeur collante d'un tour sur l'autre paraissait deja
@@ -132,10 +140,13 @@ const sonner = (evt) => { if (evt && audioPret) play(picker, evt); };
 const FLASH = { PENALTY: 'var(--terre)', Z: 'var(--terre)', Z_PLUS: 'var(--terre)' };
 let penaliteDuTour = null;   // penalite survenue au tour qui vient d'etre joue
 
-function flasher(mot, couleur) {
+function flasher(mot, couleur, nom = '') {
   const f = $('flash');
-  f.querySelector('.mot').textContent = mot;
-  f.querySelector('.mot').style.color = couleur;
+  const cible = f.querySelector('.mot');
+  // Le flash se joue par-dessus l'ecran du joueur SUIVANT : sans le nom, tout
+  // le monde regarde le grand chiffre rouge et lit le mauvais joueur dessous.
+  cible.innerHTML = (nom ? `<span class="nom">${esc(nom)}</span>` : '') + esc(mot);
+  cible.style.color = couleur;
   f.classList.remove('on');
   void f.offsetWidth;              // force le redemarrage de l'animation
   f.classList.add('on');           // non bloquant : rien n'attend sa fin
@@ -311,7 +322,10 @@ function laPartie() {
 function majValider() {
   const b = $('b-valider');
   b.disabled = desChoisis === null;
-  b.textContent = desChoisis === null ? 'Combien de dés restent ?' : 'Valider';
+  b.textContent = desChoisis === null ? 'Combien de dés restent ?'
+    : scoreAConfirmer !== null ? `${nb(scoreAConfirmer)} ? Confirmer`
+    : 'Valider';
+  b.classList.toggle('or', scoreAConfirmer !== null);
 }
 
 function rendreDes() {
@@ -347,6 +361,14 @@ function rendrePartie() {
   $('p-qui').textContent = fini ? 'Partie terminée' : actif.name;
   $('p-total').textContent = fini ? '' : nb(etat.scores[actif.id]);
   const reste = view.remaining(etat);
+  const pun = fini ? 0 : etat.punitive[actif.id];
+  const seuil = (etat.config ?? CONFIG).punitiveThreshold;
+  $('p-punitif').innerHTML = !pun ? '' :
+    Array.from({ length: seuil }, (_, i) =>
+      `<span class="pastille ${i < pun ? 'pleine' : ''}"></span>`).join('') +
+    `<span>${pun} / ${seuil}${pun >= seuil - 1 ? ' — prochain échec : −' + nb((etat.config ?? CONFIG).penalty) : ''}</span>`;
+  $('p-punitif').className = 'punitif' + (pun >= seuil - 1 ? ' chaud' : '');
+
   $('p-reste').textContent = fini ? ''
     : etat.status === 'FINAL_ROUND' ? 'dernier tour'
     : reste === 0 ? `${nb(CONFIG.target)} atteints`
@@ -363,9 +385,15 @@ function rendrePartie() {
   const offre = fini ? null : view.carryOffer(etat);
   $('bloc-reprise').hidden = !offre;
   if (offre) {
-    $('reprise-texte').innerHTML = `Il reste <b>${offre.dice} dé${offre.dice > 1 ? 's' : ''}</b> et <b>${nb(offre.score)} points</b> sur la table.`;
+    $('reprise-texte').innerHTML =
+      `Il reste <b>${offre.dice} dé${offre.dice > 1 ? 's' : ''}</b> et <b>${nb(offre.score)} points</b> sur la table.`;
+    $('b-reprendre-des').textContent = `Reprendre ${nb(offre.score)} pts`;
   }
-  $('bloc-saisie').hidden = !!offre || fini;
+  // La saisie reste visible PENDANT l'offre. Avant, elle disparaissait : la
+  // reprise est proposee dans ~65 % des tours et acceptee dans ~18 % (§17),
+  // donc ~47 taps par partie ne servaient qu'a dire non, et la carte de saisie
+  // sautait de place entre deux tours consecutifs.
+  $('bloc-saisie').hidden = fini;
 
   // Tout reactiver d'abord : le verrou d'action a pu tout desarmer, et seuls
   // les cas ci-dessous doivent rester gris.
@@ -416,11 +444,31 @@ async function commande(evenement) {
 }
 
 async function executer(g, evenement) {
-  const avant = store.replayGame(S, g);
+  // Si des des attendent et que le joueur fait autre chose que les reprendre,
+  // c'est qu'il repart de zero. Le refus est inscrit dans l'historique — le §6
+  // l'exige, il conditionne le calcul et l'annulation — mais il ne coute plus
+  // un geste. Le moteur valide les deux evenements comme n'importe quels autres.
+  const etatOffre = store.replayGame(S, g);
+  const IMPLICITE = ['SCORE', 'Z', 'Z_PLUS', 'FAILED_ATTEMPT'];
+  if (view.carryOffer(etatOffre) && IMPLICITE.includes(evenement.type)) {
+    const avantRefus = S;
+    try {
+      S = store.record(S, g.id, { type: 'DECLINE_CARRY' });
+    } catch (err) {
+      dire('m-tour', err.message, 'ko');
+      return;
+    }
+    if (!(await sauver(avantRefus))) return;
+  }
+
+  // Relire la partie : `g` a ete capture AVANT le refus implicite et ne porte
+  // donc pas cet evenement. Rejouer l'ancien objet rendrait un etat faux.
+  const partie = laPartie();
+  const avant = store.replayGame(S, partie);
   const joueur = view.activePlayer(avant);
   const etatDisque = S;                  // ce qui est reellement ecrit
   try {
-    S = store.record(S, g.id, evenement);
+    S = store.record(S, partie.id, evenement);
   } catch (err) {
     dire('m-tour', err.message, 'ko');
     return;
@@ -447,14 +495,17 @@ async function executer(g, evenement) {
   });
   penaliteDuTour = nouvelle;          // lue par la modale de victoire
   sonner(evtSonore);
-  // La victoire n'a pas de flash : la modale est son affichage.
-  if (evtSonore === 'PENALTY') flasher(`−${nb(nouvelle.nominal)}`, FLASH.PENALTY);
-  else if (evtSonore === 'Z_PLUS') flasher('Z+', FLASH.Z_PLUS);
-  else if (evtSonore === 'Z') flasher('Z', FLASH.Z);
 
   $('points').value = '';
+  scoreAConfirmer = null;
   if (evenement.type === 'SCORE') desChoisis = null;   // choix explicite au tour suivant
   rendrePartie();
+
+  // Apres le rendu : l'ecran affiche deja le joueur suivant, donc le flash doit
+  // porter le nom de celui qu'il concerne. Toujours non bloquant (§10).
+  if (evtSonore === 'PENALTY') flasher(`−${nb(nouvelle.nominal)}`, FLASH.PENALTY, joueur.name);
+  else if (evtSonore === 'Z_PLUS') flasher('Z+', FLASH.Z_PLUS, joueur.name);
+  else if (evtSonore === 'Z') flasher('Z', FLASH.Z, joueur.name);
   if (nouvelle) {
     const nom = avant.players.find((p) => p.id === nouvelle.id)?.name ?? '';
     dire('m-tour', nouvelle.applied < nouvelle.nominal
@@ -467,9 +518,30 @@ $('b-valider').onclick = () => {
   if (desChoisis === null) return dire('m-tour', 'Choisis combien de dés restent sur la table.', 'ko');
   const v = $('points').value.trim();
   if (v === '') return dire('m-tour', 'Saisis un score.', 'ko');
-  commande({ type: 'SCORE', points: Number(v), diceLeft: desChoisis });
+  const points = Number(v);
+
+  // Un chiffre de trop — 4500 au lieu de 450 — passe tous les controles : il
+  // est multiple de 50 et depasse le plancher. Il peut declencher le dernier
+  // tour par accident. Un tap de confirmation, sur environ 2 % des tours.
+  if (points > SEUIL_CONFIRMATION && scoreAConfirmer !== points) {
+    scoreAConfirmer = points;
+    majValider();
+    dire('m-tour', 'Score inhabituel. Touche encore pour confirmer.', 'ko');
+    return;
+  }
+
+  // focus() DOIT etre synchrone dans le geste : apres un await, iOS refuse de
+  // rouvrir le clavier. Sans cela, il fallait retaper le champ a chaque tour,
+  // soit environ 68 taps par partie.
+  $('points').focus();
+  commande({ type: 'SCORE', points, diceLeft: desChoisis });
 };
-$('points').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.target.blur(); $('b-valider').click(); } });
+$('points').addEventListener('input', () => {
+  if (scoreAConfirmer !== null) { scoreAConfirmer = null; majValider(); }
+});
+// Pas de blur() : le pave numerique d'iOS n'a de toute facon pas de touche
+// Retour, et fermer le clavier obligerait a retaper le champ au tour suivant.
+$('points').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('b-valider').click(); });
 $('b-essai').onclick = () => commande({ type: 'FAILED_ATTEMPT' });
 $('b-z').onclick = () => commande({ type: 'Z' });
 $('b-zplus').onclick = () => commande({ type: 'Z_PLUS' });

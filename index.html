@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#123A6B">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -70,17 +70,17 @@
     <div class="qui" id="p-qui">—</div>
     <div class="total" id="p-total">0</div>
     <div class="reste" id="p-reste"></div>
+    <div class="punitif" id="p-punitif"></div>
   </div>
 
   <button class="discret" id="b-annuler">Annuler le dernier tour</button>
 
   <div id="bloc-reprise" hidden>
-    <div class="carte serree">
-      <p class="legende" id="reprise-texte"></p>
-      <div class="duo">
-        <button class="or" id="b-reprendre-des">Reprendre</button>
-        <button id="b-zero">Repartir de zéro</button>
-      </div>
+    <div class="carte serree offre">
+      <p class="offre-texte" id="reprise-texte"></p>
+      <button class="or" id="b-reprendre-des">Reprendre</button>
+      <p class="legende espace" id="reprise-aide">ou saisis ton score plus bas pour repartir de zéro</p>
+      <button class="discret" id="b-zero" hidden>Repartir de zéro</button>
     </div>
   </div>
 

@@ -6,7 +6,7 @@
   --cobalt:#1B4D8F;  --cobalt-fonce:#123A6B;  --cobalt-clair:#4C7FBF;
   --creme:#F5EFE1;   --creme-ombre:#E8DFCB;   --blanc:#FCFAF4;
   --or:#C9962C;      --terre:#B4543A;         --vert:#4A7C59;
-  --encre:#16233A;   --gris:#6B7688;
+  --encre:#16233A;   --gris:#5A6478;   --bord-discret:#B9C0CC;
   --serif:Georgia,'Iowan Old Style','Times New Roman',serif;
   --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
   --rayon:14px;
@@ -53,7 +53,7 @@ button:disabled{ opacity:.34; box-shadow:none; cursor:default }
 button.plein{ background:var(--cobalt); color:var(--blanc); border-color:var(--cobalt-fonce) }
 button.or{ background:var(--or); border-color:#9C7420; color:#2C2005 }
 button.terre{ background:var(--terre); border-color:#8C4029; color:var(--blanc) }
-button.discret{ background:var(--blanc); border-color:var(--creme-ombre); color:var(--gris);
+button.discret{ background:var(--blanc); border-color:var(--bord-discret); color:var(--gris);
   min-height:48px; font-weight:500 }
 button.geant{ min-height:72px; font-size:20px }
 
@@ -170,7 +170,7 @@ table.bareme td:last-child{ text-align:right; font-family:var(--serif); font-wei
   --cobalt:var(--accent); --cobalt-fonce:var(--accent); --cobalt-clair:var(--trait);
   --creme:var(--noir); --creme-ombre:var(--trait); --blanc:var(--panneau);
   --or:var(--signal); --terre:var(--accent); --vert:#3DD68C;
-  --encre:var(--texte); --gris:var(--faible);
+  --encre:var(--texte); --gris:var(--faible); --bord-discret:#4A525C;
 }
 
 [data-theme="tableau"] body{
@@ -205,7 +205,7 @@ table.bareme td:last-child{ text-align:right; font-family:var(--serif); font-wei
 [data-theme="tableau"] button.or{ background:var(--signal); color:#191100; border-color:var(--signal); font-weight:800 }
 [data-theme="tableau"] button.terre{ background:transparent; color:var(--accent); border:2px solid var(--accent) }
 [data-theme="tableau"] button.discret{ background:transparent; color:var(--faible); border-color:var(--trait) }
-[data-theme="tableau"] button.geant{ font-size:17px; letter-spacing:.14em }
+[data-theme="tableau"] button.geant{ font-size:20px; letter-spacing:.10em }
 
 [data-theme="tableau"] input,[data-theme="tableau"] select{
   border-radius:0; background:var(--noir); border:1px solid var(--trait); color:var(--texte);
@@ -281,3 +281,26 @@ table.bareme td:last-child{ text-align:right; font-family:var(--serif); font-wei
   align-items:center; justify-content:center; font-size:13px }
 .themes button .apercu{ display:block; width:46px; height:12px; border-radius:2px }
 .themes button[aria-pressed="true"]{ outline:3px solid var(--or); outline-offset:-3px }
+
+/* --- Lot 3 : ce qui decide, se lit ---------------------------------------- */
+
+.offre{ border-color:var(--or); border-width:2px }
+.offre-texte{ font-size:19px; line-height:1.35; margin:0 0 12px; font-weight:500 }
+.offre-texte b{ font-weight:700; color:var(--cobalt-fonce) }
+[data-theme="tableau"] .offre{ border-left-color:var(--signal) }
+[data-theme="tableau"] .offre-texte b{ color:var(--signal) }
+
+.essais{ font-size:15px; color:var(--gris) }
+
+/* Compteur punitif dans le bloc du joueur actif : c'est le seul chiffre qui
+   annonce le -1000, il etait en 11 px au fond du tableau des scores. */
+.punitif{ display:flex; align-items:center; justify-content:center; gap:7px;
+  margin-top:8px; font-size:13px; letter-spacing:.06em }
+.punitif .pastille{ width:15px; height:15px; border-radius:50%;
+  border:2px solid currentColor; display:inline-block }
+.punitif .pastille.pleine{ background:currentColor }
+.punitif.chaud{ color:var(--or); font-weight:700 }
+[data-theme="tableau"] .actif-bloc .punitif{ justify-content:flex-start }
+
+#flash .nom{ display:block; font-size:8vw; letter-spacing:.06em; margin-bottom:-1vw;
+  text-transform:uppercase; opacity:.92 }
