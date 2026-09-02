@@ -301,7 +301,8 @@ function confirmerSuppression(p) {
   const consequences = impact.parties === 0
     ? `<p>${esc(p.name)} n'a jamais joué. Sa suppression ne change rien à personne.</p>`
     : `<p><b>${esc(p.name)}</b> a joué <b>${impact.parties} partie${impact.parties > 1 ? 's' : ''}</b>.
-         Elles seront effacées : une partie ne peut pas rester amputée d'un joueur.</p>
+         ${impact.parties > 1 ? 'Elles seront effacées' : 'Elle sera effacée'} : une partie ne peut pas
+         rester amputée d'un joueur.</p>
        <p class="legende">Ce que les autres y perdent</p>
        <div class="tableau">${impact.affectes.map((a) => `
          <div class="ligne"><span class="nom">${esc(a.name)}</span>
