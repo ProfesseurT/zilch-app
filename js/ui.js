@@ -612,27 +612,74 @@ function rendreStats() {
 
 // --- Demarrage --------------------------------------------------------------
 
+/**
+ * Le passage de Safari a l'application installee.
+ *
+ * Sur iOS, Safari et l'application installee sont DEUX COFFRES SEPARES : rien
+ * de ce qui a ete enregistre dans l'onglet ne suit dans l'icone. Une banniere
+ * qui se contente de dire « installe » envoie donc perdre ses joueurs, une
+ * seule fois, sans bruit, exactement au pire moment. D'ou les deux moities.
+ */
+function rendreBandeauInstallation(installe) {
+  const zone = $('avert-install');
+  zone.innerHTML = '';
+
+  if (!installe) {
+    const aDesDonnees = S.players.length || S.games.length;
+    zone.append(el(`<div class="bandeau alerte">
+      <b>Installe ZILCH sur ton écran d'accueil.</b> Hors de l'écran d'accueil, Safari
+      efface tout au bout de 7 jours sans ouverture. Bouton <b>Partager</b>, puis
+      <b>Sur l'écran d'accueil</b>.<br>
+      <b>Ce que tu enregistres ici ne suivra pas dans l'application installée.</b>
+      Exporte d'abord, tu réimporteras ensuite.
+      ${aDesDonnees ? '<button class="or espace" id="b-export-install">Exporter avant d\'installer</button>' : ''}
+    </div>`));
+    if ($('b-export-install')) $('b-export-install').onclick = exporter;
+    return;
+  }
+
+  // Installee et vide : soit c'est la toute premiere fois, soit l'utilisateur
+  // arrive de Safari et croit avoir tout perdu. Dans les deux cas, dire ou
+  // sont ses donnees coute un bandeau et sauve la soiree.
+  if (!S.players.length && !S.games.length) {
+    zone.append(el(`<div class="bandeau info">
+      <b>Bienvenue.</b> Si tu as déjà joué dans Safari, tes données ne suivent pas
+      toutes seules : récupère-les depuis l'onglet <b>Parties</b>, bouton
+      <b>Importer un fichier</b>.</div>`));
+  }
+}
+
 (async function demarrer() {
   $('bareme').innerHTML = DICE_TABLE.map(([nom, pts]) => `<tr><td>${esc(nom)}</td><td>${nb(pts)}</td></tr>`).join('');
   rendreDes();
   majValider();
+
+  // La detection d'installation ne depend pas du stockage : elle doit marcher
+  // meme si IndexedDB est mort, parce que c'est justement le conseil qui sauve
+  // les donnees.
+  const installe = idb.isInstalled();
+
   try {
     const b = await idb.boot();
     S = b.store;
     // Le store fait autorite sur le raccourci localStorage : c'est lui qui suit
     // l'utilisateur a travers un export et un changement de telephone.
     if (S.settings?.theme) poserTheme(S.settings.theme);
-    if (!b.installed) {
-      // §8.2 : hors ecran d'accueil, Safari efface tout apres 7 jours.
-      $('avert-install').append(el(`<div class="bandeau alerte">
-        <b>Installe ZILCH sur ton écran d'accueil.</b> Sinon Safari effacera tes parties
-        au bout de 7 jours sans ouverture. Bouton <b>Partager</b>, puis
-        <b>Sur l'écran d'accueil</b>.</div>`));
+    if (b.persistence.supported && !b.persistence.granted) {
+      console.info('[ZILCH] stockage persistant refuse par le systeme : exporter plus souvent.');
     }
-    rendreAccueil();
-    const g = partieEnCours();
-    if (g) { partieId = g.id; aller('partie'); }
   } catch (err) {
-    document.body.prepend(el(`<div class="bandeau alerte"><b>Stockage inaccessible.</b> ${esc(err.message)}</div>`));
+    // Plutot qu'un ecran mort ou chaque ecran plante sur un store nul : on
+    // joue, on le dit, et l'export reste possible.
+    ephemere = true;
+    S = store.emptyStore();
+    document.body.prepend(el(`<div class="bandeau alerte">
+      <b>Stockage inaccessible — rien ne sera conservé.</b> ${esc(err.message)}
+      Tu peux jouer et exporter, mais si tu fermes l'application tout disparaît.</div>`));
   }
+
+  rendreBandeauInstallation(installe);
+  rendreAccueil();
+  const g = partieEnCours();
+  if (g) { partieId = g.id; aller('partie'); }
 })();
