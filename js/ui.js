@@ -605,10 +605,15 @@ async function executer(g, evenement) {
   // L'echelle vit dans sounds.js et elle est testee. Ici on se contente de lui
   // donner les trois faits du tour ; le son et l'image ne peuvent plus se
   // contredire, puisqu'ils sortent de la meme decision.
+  // LE SON ET LE FLASH SUIVENT LE RESULTAT DU TOUR, PAS LA TOUCHE PRESSEE.
+  // Un 3e essai rate est un FAILED_ATTEMPT pour le doigt, mais un Z pour le
+  // jeu : le moteur termine le tour lui-meme. En se fiant au type de la
+  // commande, l'application restait muette sur un Z sur trois.
+  const tourTermine = apres.turns.length > avant.turns.length ? apres.turns.at(-1) : null;
   const evtSonore = choisirSon({
     victoire: apres.status === 'FINISHED',
     penalite: !!nouvelle,
-    type: evenement.type,
+    type: tourTermine?.outcome ?? null,
   });
   penaliteDuTour = nouvelle;          // lue par la modale de victoire
   sonner(evtSonore);
@@ -631,10 +636,11 @@ async function executer(g, evenement) {
     dire('m-tour', nouvelle.applied < nouvelle.nominal
       ? `${nom} : pénalité de ${nb(nouvelle.nominal)}, ${nb(nouvelle.applied)} appliqués — le score ne passe pas sous zéro.`
       : `${nom} : pénalité de ${nb(nouvelle.nominal)} points.`, 'ko');
-  } else if (evenement.type === 'Z' || evenement.type === 'Z_PLUS') {
-    dire('m-tour', `${joueur.name} : ${evenement.type === 'Z' ? 'Z' : 'Z+'}. Tour perdu.`, 'ko');
-  } else if (evenement.type === 'SCORE') {
-    dire('m-tour', `${joueur.name} marque ${nb(evenement.points)}.`, 'ok');
+  } else if (tourTermine?.outcome === 'Z' || tourTermine?.outcome === 'Z_PLUS') {
+    const auto = evenement.type === 'FAILED_ATTEMPT' ? ` (${tourTermine.attempts} essais)` : '';
+    dire('m-tour', `${joueur.name} : ${tourTermine.outcome === 'Z' ? 'Z' : 'Z+'}${auto}. Tour perdu.`, 'ko');
+  } else if (tourTermine?.outcome === 'SCORE') {
+    dire('m-tour', `${joueur.name} marque ${nb(tourTermine.points)}.`, 'ok');
   } else dire('m-tour', '');
 }
 

@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { createGame, apply } from '../js/engine.js';
 import { createPicker, allFiles, SOUND_MANIFEST, SoundError, choisirSon, PRIORITE } from '../js/sounds.js';
 
 test('un son tire appartient bien au pool de son evenement', () => {
@@ -103,4 +104,50 @@ test('chaque son choisi existe au manifeste et l ordre de priorite est complet',
   ]);
   assert.deepEqual([...produits].sort(), [...PRIORITE].sort(),
     'l echelle couvre exactement les evenements sonores du jeu');
+});
+
+// --- Le son suit le RESULTAT du tour, jamais la touche pressee -------------
+
+test('trois essais rates declenchent le son du Z, comme n importe quel Z', () => {
+  // Le doigt tape « Essai raté ». Le jeu, lui, inscrit un Z : le moteur termine
+  // le tour tout seul au troisieme essai. Se fier au type de la commande
+  // rendait l'application muette sur un Z sur trois.
+  let s = createGame([{ id: 'a', name: 'Ana' }, { id: 'b', name: 'Bruno' }]);
+  let avant = s.turns.length;
+  s = apply(s, { type: 'FAILED_ATTEMPT' });
+  assert.equal(s.turns.length, avant, 'les deux premiers essais ne terminent rien');
+  s = apply(s, { type: 'FAILED_ATTEMPT' });
+  assert.equal(s.turns.length, avant, 'toujours rien');
+  s = apply(s, { type: 'FAILED_ATTEMPT' });
+
+  const tour = s.turns.at(-1);
+  assert.equal(tour.outcome, 'Z', 'le moteur a bien inscrit un Z');
+  assert.equal(tour.attempts, 3);
+  assert.equal(
+    choisirSon({ victoire: false, penalite: false, type: tour.outcome }), 'Z',
+    'et le son qui en decoule est celui du Z',
+  );
+  // Alors que la commande tapee, elle, ne dit rien.
+  assert.equal(choisirSon({ type: 'FAILED_ATTEMPT' }), null);
+});
+
+test('un Z automatique qui declenche la penalite joue la penalite, pas le Z', () => {
+  let s = createGame([{ id: 'a', name: 'Ana' }, { id: 'b', name: 'Bruno' }]);
+  // Ana : deux Z, puis un troisieme par epuisement des essais.
+  for (let tour = 0; tour < 2; tour++) {
+    s = apply(s, { type: 'Z' });                                   // Ana
+    s = apply(s, { type: 'SCORE', points: 250, diceLeft: 2 });     // Bruno
+    s = apply(s, { type: 'DECLINE_CARRY' });                       // Ana repart
+  }
+  const penalitesAvant = s.penalties.length;
+  s = apply(s, { type: 'FAILED_ATTEMPT' });
+  s = apply(s, { type: 'FAILED_ATTEMPT' });
+  s = apply(s, { type: 'FAILED_ATTEMPT' });
+  const tour = s.turns.at(-1);
+  assert.equal(tour.outcome, 'Z');
+  assert.ok(s.penalties.length > penalitesAvant, 'la penalite est bien tombee');
+  assert.equal(
+    choisirSon({ victoire: false, penalite: true, type: tour.outcome }), 'PENALTY',
+    'un seul son, et c est le plus fort',
+  );
 });

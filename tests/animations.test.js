@@ -75,5 +75,17 @@ test('les animations reduites sont respectees ET l information survit', () => {
 
 test('le resultat d un tour est toujours ecrit, jamais porte par le seul mouvement', () => {
   assert.match(ui, /Tour perdu/, 'un Z ou un Z+ laisse une phrase');
-  assert.match(ui, /marque \$\{nb\(evenement\.points\)\}/, 'un score laisse une phrase');
+  assert.match(ui, /marque \$\{nb\(tourTermine\.points\)\}/, 'un score laisse une phrase');
+});
+
+test('le son et le flash suivent le resultat du tour, pas la touche pressee', () => {
+  // Regression : un 3e essai rate est un FAILED_ATTEMPT pour le doigt et un Z
+  // pour le jeu. En se fiant au type de la commande, l application restait
+  // muette sur un Z sur trois.
+  const debut = ui.indexOf('const tourTermine');
+  const bloc = ui.slice(debut, ui.indexOf('sonner(evtSonore)', debut));
+  assert.match(bloc, /type:\s*tourTermine\?\.outcome/,
+    'choisirSon doit recevoir le resultat inscrit par le moteur');
+  assert.ok(!/type:\s*evenement\.type/.test(ui),
+    'le type de la commande ne doit plus decider du son');
 });
