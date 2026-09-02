@@ -188,6 +188,9 @@ function rendreRappelExport() {
 
 function rendreAccueil() {
   rendreThemes();
+  // Rejoue a chaque passage : le bouton « Exporter avant d'installer » n'a de
+  // sens qu'a partir du moment ou il y a quelque chose a exporter.
+  rendreBandeauInstallation(idb.isInstalled());
   rendreRappelExport();
   const g = partieEnCours();
   const b = $('b-reprendre');
@@ -654,11 +657,6 @@ function rendreBandeauInstallation(installe) {
   rendreDes();
   majValider();
 
-  // La detection d'installation ne depend pas du stockage : elle doit marcher
-  // meme si IndexedDB est mort, parce que c'est justement le conseil qui sauve
-  // les donnees.
-  const installe = idb.isInstalled();
-
   try {
     const b = await idb.boot();
     S = b.store;
@@ -678,7 +676,6 @@ function rendreBandeauInstallation(installe) {
       Tu peux jouer et exporter, mais si tu fermes l'application tout disparaît.</div>`));
   }
 
-  rendreBandeauInstallation(installe);
   rendreAccueil();
   const g = partieEnCours();
   if (g) { partieId = g.id; aller('partie'); }
