@@ -170,6 +170,10 @@ function rendreRappelExport() {
   const zone = $('rappel-export');
   zone.innerHTML = '';
   if (!S.games.length) return;
+  // Deux bandeaux rouges empiles repoussent « Nouvelle partie » hors de vue, et
+  // disent la meme chose. Quand le bandeau d'installation porte deja son bouton
+  // d'export, il suffit.
+  if ($('b-export-install')) return;
   const dernier = S.settings?.lastExportAt;
   const jours = dernier ? Math.floor((Date.now() - new Date(dernier)) / 86400000) : null;
   const partiesDepuis = dernier
