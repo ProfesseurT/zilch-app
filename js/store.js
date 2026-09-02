@@ -32,6 +32,77 @@ export function addPlayer(store, name) {
   return { ...store, players: store.players.concat([player]) };
 }
 
+/**
+ * Archive un joueur : il disparait de la selection d'une nouvelle partie, mais
+ * l'historique et les statistiques restent intacts.
+ *
+ * C'est la sortie par defaut, et il faut comprendre pourquoi : supprimer
+ * vraiment un joueur ne touche pas que SES chiffres. Les huit victoires d'Ana
+ * ont ete gagnees CONTRE Bruno ; effacer Bruno reecrit le palmares d'Ana.
+ * Archiver retire le joueur de la table sans reecrire le passe de personne.
+ */
+export function archivePlayer(store, id, archived = true) {
+  const p = store.players.find((x) => x.id === id);
+  if (!p) throw new StoreError('Joueur inconnu.');
+  if (archived && currentGame(store)?.order.includes(id)) {
+    throw new StoreError(`${p.name} joue la partie en cours.`);
+  }
+  return { ...store, players: store.players.map((x) => (x.id === id ? { ...x, archived } : x)) };
+}
+
+/** Ce qu'une suppression definitive detruirait, chiffre par chiffre. */
+export function impactSuppression(store, id) {
+  const joueur = store.players.find((x) => x.id === id);
+  if (!joueur) throw new StoreError('Joueur inconnu.');
+  const parties = store.games.filter((g) => g.order.includes(id));
+  const autres = new Map();
+  for (const g of parties) {
+    for (const pid of g.order) {
+      if (pid === id) continue;
+      const a = autres.get(pid) ?? { parties: 0, victoires: 0 };
+      a.parties += 1;
+      const etat = replayGame(store, g);
+      if (etat.status === 'FINISHED' && etat.winner === pid) a.victoires += 1;
+      autres.set(pid, a);
+    }
+  }
+  return {
+    joueur: joueur.name,
+    parties: parties.length,
+    affectes: [...autres].map(([pid, a]) => ({
+      id: pid,
+      name: store.players.find((x) => x.id === pid)?.name ?? '?',
+      ...a,
+    })),
+  };
+}
+
+/**
+ * Supprime definitivement un joueur.
+ *
+ * Un joueur qui n'a jamais joue s'efface sans consequence. Des qu'il a joue,
+ * ses parties ne peuvent pas rester amputees d'un participant : la suppression
+ * EXIGE alors d'effacer aussi ces parties, ce qui modifie les statistiques de
+ * tous ceux qui y etaient. C'est explicite, jamais implicite.
+ */
+export function deletePlayer(store, id, { withGames = false } = {}) {
+  const p = store.players.find((x) => x.id === id);
+  if (!p) throw new StoreError('Joueur inconnu.');
+  if (currentGame(store)?.order.includes(id)) throw new StoreError(`${p.name} joue la partie en cours.`);
+  const parties = store.games.filter((g) => g.order.includes(id));
+  if (parties.length && !withGames) {
+    throw new StoreError(
+      `${p.name} a joué ${parties.length} partie${parties.length > 1 ? 's' : ''}. `
+      + 'Archive-le, ou confirme la suppression de ces parties.',
+    );
+  }
+  return {
+    ...store,
+    players: store.players.filter((x) => x.id !== id),
+    games: store.games.filter((g) => !g.order.includes(id)),
+  };
+}
+
 export function renamePlayer(store, id, name) {
   const clean = String(name || '').trim();
   if (!clean) throw new StoreError('Le nom du joueur est vide.');
@@ -43,6 +114,8 @@ export function renamePlayer(store, id, name) {
 
 export function startGame(store, playerIds, location = null) {
   if (playerIds.length < 2) throw new StoreError('Il faut au moins deux joueurs.');
+  const archives = playerIds.filter((id) => store.players.find((p) => p.id === id)?.archived);
+  if (archives.length) throw new StoreError('Un joueur archivé ne peut pas rejoindre une partie.');
   // Une seconde partie en cours devenait invisible : l'ecran d'accueil ne
   // rouvrait que la premiere, et l'historique ne liste que les parties finies.
   if (currentGame(store)) throw new StoreError('Une partie est deja en cours.');
@@ -131,57 +204,111 @@ export function undoLast(store, gameId) {
 // --- Statistiques : toujours recalculees, jamais stockees --------------------
 
 /**
- * Statistiques d'un joueur. Elles ne sont jamais stockees : elles se
- * recalculent depuis les evenements, comme l'exige le §7.
+ * Statistiques d'un joueur. Jamais stockees : recalculees depuis les
+ * evenements, comme l'exige le §7.
  *
- * Cette fonction NE DECIDE PLUS a qui appartient un tour. C'est le moteur qui
- * l'inscrit dans `state.turns`, parce qu'il est le seul a savoir qu'un 3e essai
- * rate termine un tour. La version precedente refaisait ce calcul de son cote,
- * l'ignorait, et attribuait tout le reste de la partie au mauvais joueur.
+ * Cette fonction NE DECIDE RIEN. Elle compte des lignes que le moteur a
+ * inscrites dans `state.turns` — lui seul sait qu'un 3e essai rate termine un
+ * tour, ou combien un repreneur risquait vraiment.
  */
 export function stats(store, playerId) {
   const s = {
     games: 0, wins: 0, turns: 0, positiveTurns: 0, points: 0, turnPoints: 0,
-    bestTurn: 0, z: 0, zPlus: 0, penalties: 0, carryTaken: 0, carryWon: 0,
+    bestTurn: 0, z: 0, zPlus: 0, penalties: 0, penaltyPoints: 0, maxPunitive: 0,
+    bestStreak: 0, diceLeftTotal: 0,
+    carryOffered: 0, carryTaken: 0, carryWon: 0, carryLost: 0,
+    carryGained: 0, carryLostPoints: 0,
+    opponents: {}, places: {},
   };
 
   for (const game of store.games) {
     if (!game.order.includes(playerId)) continue;
     const state = replayGame(store, game);
 
-    // Le rejeu fait foi, pas le statut recopie sur la partie.
     if (state.status === 'FINISHED') {
       s.games += 1;
       if (state.winner === playerId) s.wins += 1;
       s.points += state.scores[playerId] ?? 0;
+      for (const pid of game.order) {
+        if (pid === playerId) continue;
+        const nom = store.players.find((x) => x.id === pid)?.name ?? '?';
+        s.opponents[nom] = (s.opponents[nom] ?? 0) + 1;
+      }
+      const lieu = (game.location || '').trim();
+      if (lieu) s.places[lieu] = (s.places[lieu] ?? 0) + 1;
     }
 
-    // Les tours, eux, comptent meme dans une partie inachevee ou arretee :
-    // le §7 demande le nombre TOTAL de tours, de Z et de Z+.
+    // Les tours comptent meme dans une partie inachevee : le §7 demande le
+    // nombre TOTAL de tours, de Z et de Z+.
+    let serie = 0;
     for (const t of state.turns) {
       if (t.playerId !== playerId) continue;
       s.turns += 1;
+      if (t.offered) s.carryOffered += 1;
       if (t.carry) s.carryTaken += 1;
-      if (t.penalty) s.penalties += 1;
+      if (t.penalty) { s.penalties += 1; s.penaltyPoints += t.penalty.applied; }
+      s.maxPunitive = Math.max(s.maxPunitive, t.punitiveReached ?? 0);
+
       if (t.outcome === 'SCORE') {
         s.positiveTurns += 1;
         s.turnPoints += t.points;
         s.bestTurn = Math.max(s.bestTurn, t.points);
-        if (t.carry) s.carryWon += 1;
-      } else if (t.outcome === 'Z') {
-        s.z += 1;
-      } else if (t.outcome === 'Z_PLUS') {
-        s.zPlus += 1;
+        s.diceLeftTotal += t.diceLeft ?? 0;
+        serie += 1;
+        s.bestStreak = Math.max(s.bestStreak, serie);
+        if (t.carry) { s.carryWon += 1; s.carryGained += t.points; }
+      } else {
+        serie = 0;
+        if (t.outcome === 'Z') s.z += 1; else if (t.outcome === 'Z_PLUS') s.zPlus += 1;
+        // Un lancer blanc en reprise fait perdre le total herite : c'est la
+        // seule mesure honnete de ce qu'une reprise ratee a coute.
+        if (t.carry) { s.carryLost += 1; s.carryLostPoints += t.stake; }
       }
     }
   }
 
+  const pc = (n, d) => (d ? Math.round((n / d) * 100) : 0);
   s.winRate = s.games ? s.wins / s.games : 0;
   s.avgScore = s.games ? Math.round(s.points / s.games) : 0;
-  // Moyenne des tours positifs, pas du score final : la penalite ne doit pas
-  // faire baisser la moyenne d'un tour qu'elle n'a pas touche.
   s.avgPositiveTurn = s.positiveTurns ? Math.round(s.turnPoints / s.positiveTurns) : 0;
+  s.avgTurnsPerGame = s.games ? Math.round(s.turns / s.games) : 0;
+  s.avgDiceLeft = s.positiveTurns ? Math.round((s.diceLeftTotal / s.positiveTurns) * 10) / 10 : 0;
+  s.validRate = pc(s.positiveTurns, s.turns);
+  s.carryRate = pc(s.carryTaken, s.carryOffered);          // a quel point il ose
+  s.carrySuccess = pc(s.carryWon, s.carryTaken);           // a quel point il reussit
+  // La prime de risque : ce que reprendre lui a rapporte, moins ce que ca lui a
+  // coute. Positif, l'audace paie. Negatif, il reprend trop souvent ou trop tard.
+  s.riskPremium = s.carryGained - s.carryLostPoints;
+  s.topOpponents = Object.entries(s.opponents).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  s.topPlaces = Object.entries(s.places).sort((a, b) => b[1] - a[1]).slice(0, 3);
   return s;
+}
+
+/**
+ * §7 — la vue globale. Un classement par colonne, calcule une seule fois pour
+ * tout le monde : `stats()` rejoue chaque partie, l'appeler par joueur ET par
+ * colonne couterait le carre du nombre de joueurs.
+ */
+export const CLASSEMENTS = [
+  { cle: 'wins', titre: 'Victoires', format: (v) => v },
+  { cle: 'winRate', titre: 'Taux de victoire', format: (v) => `${Math.round(v * 100)} %` },
+  { cle: 'bestTurn', titre: 'Plus gros tour', format: (v) => v },
+  { cle: 'riskPremium', titre: 'Prime de risque', format: (v) => (v > 0 ? `+${v}` : `${v}`) },
+  { cle: 'carrySuccess', titre: 'Reprises réussies', format: (v) => `${v} %` },
+  { cle: 'z', titre: 'Z', format: (v) => v },
+  { cle: 'zPlus', titre: 'Z+', format: (v) => v },
+  { cle: 'penalties', titre: 'Pénalités', format: (v) => v },
+  { cle: 'maxPunitive', titre: 'Pire série', format: (v) => v },
+];
+
+export function classements(store) {
+  const tous = store.players.map((p) => ({ player: p, s: stats(store, p.id) }))
+    .filter(({ s }) => s.turns > 0);
+  return CLASSEMENTS.map((c) => ({
+    ...c,
+    rangs: tous.slice().sort((a, b) => b.s[c.cle] - a.s[c.cle])
+      .map(({ player, s }) => ({ name: player.name, valeur: s[c.cle] })),
+  }));
 }
 
 // --- Export / import --------------------------------------------------------

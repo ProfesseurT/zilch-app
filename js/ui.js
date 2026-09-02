@@ -231,18 +231,122 @@ function rendreAccueil() {
 
 // --- Joueurs ----------------------------------------------------------------
 
+let joueurOuvert = null;   // le joueur dont le panneau d'edition est deplie
+
+function carteJoueur(p) {
+  const st = store.stats(S, p.id);
+  const ouvert = joueurOuvert === p.id;
+  const puce = el(`<div class="puce ${p.archived ? 'archive' : ''}" style="display:block">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="nom">${esc(p.name)}${p.archived ? ' · archivé' : ''}
+        <div class="meta">${st.games} partie${st.games > 1 ? 's' : ''} · ${st.wins} victoire${st.wins > 1 ? 's' : ''} · ${st.turns} tour${st.turns > 1 ? 's' : ''}</div>
+      </div>
+      <span class="meta">${ouvert ? '▾' : '▸'}</span>
+    </div>
+  </div>`);
+  puce.onclick = (e) => {
+    if (e.target.closest('.actions-joueur')) return;
+    joueurOuvert = ouvert ? null : p.id;
+    rendreJoueurs();
+  };
+  if (!ouvert) return puce;
+
+  const actions = el(`<div class="actions-joueur">
+    <input id="nom-${p.id}" value="${esc(p.name)}" autocomplete="off">
+    <button class="plein" id="ren-${p.id}">Renommer</button>
+    <div class="duo">
+      <button id="arc-${p.id}">${p.archived ? 'Remettre en jeu' : 'Archiver'}</button>
+      <button class="danger" id="sup-${p.id}">Supprimer</button>
+    </div>
+    <p class="legende">Archiver le retire des nouvelles parties. Rien n'est perdu, c'est réversible.</p>
+    <div class="msg" id="msg-${p.id}"></div>
+  </div>`);
+  puce.append(actions);
+
+  actions.querySelector(`#ren-${p.id}`).onclick = async () => {
+    const etatDisque = S;
+    try {
+      S = store.renamePlayer(S, p.id, actions.querySelector(`#nom-${p.id}`).value);
+    } catch (err) { return dire(`msg-${p.id}`, err.message, 'ko'); }
+    if (!(await sauver(etatDisque))) return;
+    rendreJoueurs();
+  };
+
+  actions.querySelector(`#arc-${p.id}`).onclick = async () => {
+    const etatDisque = S;
+    try {
+      S = store.archivePlayer(S, p.id, !p.archived);
+    } catch (err) { return dire(`msg-${p.id}`, err.message, 'ko'); }
+    if (!(await sauver(etatDisque))) return;
+    joueurOuvert = null;
+    rendreJoueurs();
+  };
+
+  actions.querySelector(`#sup-${p.id}`).onclick = () => confirmerSuppression(p);
+  return puce;
+}
+
+/**
+ * §15 — supprimer un joueur deja present dans un historique.
+ *
+ * On ne se contente pas d'avertir : on montre le chiffre exact. Supprimer un
+ * joueur ne touche pas que SES statistiques — ses parties disparaissent avec
+ * lui, et avec elles les victoires que les AUTRES y ont gagnees.
+ */
+function confirmerSuppression(p) {
+  let impact;
+  try { impact = store.impactSuppression(S, p.id); }
+  catch (err) { return dire(`msg-${p.id}`, err.message, 'ko'); }
+
+  const consequences = impact.parties === 0
+    ? `<p>${esc(p.name)} n'a jamais joué. Sa suppression ne change rien à personne.</p>`
+    : `<p><b>${esc(p.name)}</b> a joué <b>${impact.parties} partie${impact.parties > 1 ? 's' : ''}</b>.
+         Elles seront effacées : une partie ne peut pas rester amputée d'un joueur.</p>
+       <p class="legende">Ce que les autres y perdent</p>
+       <div class="tableau">${impact.affectes.map((a) => `
+         <div class="ligne"><span class="nom">${esc(a.name)}</span>
+           <span class="meta">−${a.parties} partie${a.parties > 1 ? 's' : ''}${a.victoires ? `, −${a.victoires} victoire${a.victoires > 1 ? 's' : ''}` : ''}</span></div>`).join('')}
+       </div>
+       <p class="legende espace">Archiver ${esc(p.name)} produit le même effet à table, sans rien détruire.</p>`;
+
+  const m = el(`<div class="modale"><div class="boite">
+    <p class="legende">Supprimer définitivement</p>
+    ${consequences}
+    <button class="danger" id="sup-oui">${impact.parties ? `Supprimer et effacer ${impact.parties} partie${impact.parties > 1 ? 's' : ''}` : 'Supprimer'}</button>
+    ${impact.parties ? '<button class="or espace" id="sup-archiver">Archiver plutôt</button>' : ''}
+    <button class="discret espace" id="sup-non">Annuler</button>
+  </div></div>`);
+  $('modale').innerHTML = '';
+  $('modale').append(m);
+  $('sup-non').onclick = () => { $('modale').innerHTML = ''; };
+  if ($('sup-archiver')) $('sup-archiver').onclick = async () => {
+    const etatDisque = S;
+    S = store.archivePlayer(S, p.id, true);
+    if (!(await sauver(etatDisque))) return;
+    $('modale').innerHTML = ''; joueurOuvert = null; rendreJoueurs();
+  };
+  $('sup-oui').onclick = async () => {
+    const etatDisque = S;
+    try { S = store.deletePlayer(S, p.id, { withGames: true }); }
+    catch (err) { $('modale').innerHTML = ''; return dire(`msg-${p.id}`, err.message, 'ko'); }
+    if (!(await sauver(etatDisque))) return;
+    $('modale').innerHTML = ''; joueurOuvert = null; rendreJoueurs();
+  };
+}
+
 function rendreJoueurs() {
+  const actifs = S.players.filter((p) => !p.archived);
+  const archives = S.players.filter((p) => p.archived);
   const root = $('liste-joueurs');
   root.innerHTML = '';
-  if (!S.players.length) {
-    root.append(el('<div class="carte vide">Aucun joueur pour l\'instant.</div>'));
-    return;
-  }
-  for (const p of S.players) {
-    const st = store.stats(S, p.id);
-    root.append(el(`<div class="puce">
-      <div class="nom">${esc(p.name)}<div class="meta">${st.games} partie${st.games > 1 ? 's' : ''} · ${st.wins} victoire${st.wins > 1 ? 's' : ''}</div></div>
-    </div>`));
+  if (!actifs.length) root.append(el('<div class="carte vide">Aucun joueur en jeu.</div>'));
+  for (const p of actifs) root.append(carteJoueur(p));
+
+  const arc = $('liste-archives');
+  arc.innerHTML = '';
+  if (archives.length) {
+    arc.append(el(`<p class="legende">Archivés — ${archives.length}</p>`));
+    for (const p of archives) arc.append(carteJoueur(p));
   }
 }
 
@@ -266,14 +370,15 @@ function dire(id, texte, classe = '') { const n = $(id); n.textContent = texte; 
 let selection = [];
 
 function rendreNouvelle() {
-  selection = selection.filter((id) => S.players.some((p) => p.id === id));
+  const dispo = S.players.filter((p) => !p.archived);
+  selection = selection.filter((id) => dispo.some((p) => p.id === id));
   const root = $('choix-joueurs');
   root.innerHTML = '';
-  if (!S.players.length) {
+  if (!dispo.length) {
     root.append(el('<div class="vide">Ajoute d\'abord des joueurs.</div>'));
     return;
   }
-  for (const p of S.players) {
+  for (const p of dispo) {
     const rang = selection.indexOf(p.id);
     const puce = el(`<div class="puce ${rang >= 0 ? 'choisi' : ''}">
       <span class="rang">${rang >= 0 ? rang + 1 : '·'}</span>
@@ -686,25 +791,90 @@ $('fichier').onchange = async (e) => {
 
 // --- Stats ------------------------------------------------------------------
 
+function kpi(label, valeur, classe = '') {
+  return `<div class="kpi ${classe}"><span>${label}</span><b>${valeur}</b></div>`;
+}
+
+function jauge(pourcent) {
+  return `<div class="jauge"><span style="width:${Math.max(0, Math.min(100, pourcent))}%"></span></div>`;
+}
+
 function rendreStats() {
+  const rootC = $('classements');
   const root = $('classement');
+  rootC.innerHTML = '';
   root.innerHTML = '';
-  if (!S.players.length) {
-    root.append(el('<div class="carte vide">Aucun joueur.</div>'));
+
+  const joues = S.players.filter((p) => store.stats(S, p.id).turns > 0);
+  if (!joues.length) {
+    root.append(el('<div class="carte vide">Aucune partie jouée pour l\'instant.</div>'));
     return;
   }
-  const lignes = S.players.map((p) => ({ p, s: store.stats(S, p.id) }))
-    .sort((a, b) => b.s.wins - a.s.wins || b.s.avgScore - a.s.avgScore);
-  for (const { p, s } of lignes) {
-    root.append(el(`<div class="carte serree">
-      <h2>${esc(p.name)}</h2>
-      <div class="kpi"><span>Parties</span><b>${s.games}</b></div>
-      <div class="kpi"><span>Victoires</span><b>${s.wins}${s.games ? ` · ${Math.round(s.winRate * 100)} %` : ''}</b></div>
-      <div class="kpi"><span>Score moyen</span><b>${nb(s.avgScore)}</b></div>
-      <div class="kpi"><span>Meilleur tour</span><b>${nb(s.bestTurn)}</b></div>
-      <div class="kpi"><span>Z · Z+</span><b>${s.z} · ${s.zPlus}</b></div>
-      <div class="kpi"><span>Reprises tentées · gagnées</span><b>${s.carryTaken} · ${s.carryWon}</b></div>
+
+  // §7 — la vue globale : un classement par colonne.
+  const cl = store.classements(S);
+  const bloc = el('<div class="carte"><h2>Classements</h2></div>');
+  for (const c of cl) {
+    if (c.rangs.every((r) => !r.valeur)) continue;   // colonne vide, on la tait
+    bloc.append(el(`<div class="bloc-stat">
+      <p class="legende">${esc(c.titre)}</p>
+      <div class="rangs">${c.rangs.map((r, i) =>
+        `<span class="rang-item ${i === 0 ? 'premier' : ''}">${esc(r.name)} · ${esc(String(c.format(r.valeur)))}</span>`).join('')}</div>
     </div>`));
+  }
+  rootC.append(bloc);
+
+  for (const p of joues) {
+    const s = store.stats(S, p.id);
+    const carte = el(`<div class="carte"><h2>${esc(p.name)}${p.archived ? ' · archivé' : ''}</h2></div>`);
+
+    carte.append(el(`<div class="bloc-stat">
+      <p class="legende">Parties</p>
+      ${kpi('Jouées', s.games, 'fort')}
+      ${kpi('Victoires', `${s.wins}${s.games ? ` · ${Math.round(s.winRate * 100)} %` : ''}`, 'fort')}
+      ${kpi('Score moyen', nb(s.avgScore))}
+      ${kpi('Tours par partie', s.avgTurnsPerGame)}
+    </div>`));
+
+    carte.append(el(`<div class="bloc-stat">
+      <p class="legende">Tours — ${s.turns} au total</p>
+      ${kpi('Tours valides', `${s.positiveTurns} · ${s.validRate} %`)}
+      ${jauge(s.validRate)}
+      ${kpi('Score moyen d\'un tour valide', nb(s.avgPositiveTurn))}
+      ${kpi('Plus gros tour', nb(s.bestTurn), 'fort')}
+      ${kpi('Plus longue série de tours valides', s.bestStreak)}
+      ${kpi('Dés laissés en moyenne', s.avgDiceLeft)}
+    </div>`));
+
+    carte.append(el(`<div class="bloc-stat">
+      <p class="legende">Échecs</p>
+      ${kpi('Z', s.z)}
+      ${kpi('Z+', s.zPlus)}
+      ${kpi('Pénalités', `${s.penalties}${s.penaltyPoints ? ` · −${nb(s.penaltyPoints)} pts` : ''}`)}
+      ${kpi('Pire série punitive', s.maxPunitive)}
+    </div>`));
+
+    // Le bloc que Ted voulait : combien de fois il a ose, et ce que ca lui a rapporte.
+    carte.append(el(`<div class="bloc-stat">
+      <p class="legende">Reprises</p>
+      ${kpi('Proposées', s.carryOffered)}
+      ${kpi('Prises', `${s.carryTaken}${s.carryOffered ? ` · ${s.carryRate} %` : ''}`)}
+      ${jauge(s.carryRate)}
+      ${kpi('Réussies', `${s.carryWon}${s.carryTaken ? ` · ${s.carrySuccess} %` : ''}`)}
+      ${kpi('Gagné en reprise', nb(s.carryGained))}
+      ${kpi('Perdu en reprise', s.carryLostPoints ? `−${nb(s.carryLostPoints)}` : '0')}
+      ${kpi('Prime de risque', (s.riskPremium > 0 ? '+' : '') + nb(s.riskPremium), 'fort ' + (s.riskPremium > 0 ? 'positif' : s.riskPremium < 0 ? 'negatif' : ''))}
+      <p class="legende espace">Ce que reprendre lui a rapporté, moins ce que ça lui a coûté.</p>
+    </div>`));
+
+    if (s.topOpponents.length || s.topPlaces.length) {
+      carte.append(el(`<div class="bloc-stat">
+        <p class="legende">Habitudes</p>
+        ${s.topOpponents.length ? kpi('Adversaires', s.topOpponents.map(([n, c]) => `${esc(n)} (${c})`).join(', ')) : ''}
+        ${s.topPlaces.length ? kpi('Lieux', s.topPlaces.map(([n, c]) => `${esc(n)} (${c})`).join(', ')) : ''}
+      </div>`));
+    }
+    root.append(carte);
   }
 }
 

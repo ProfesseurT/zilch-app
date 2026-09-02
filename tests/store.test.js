@@ -4,6 +4,7 @@ import {
   emptyStore, addPlayer, renamePlayer, startGame, record, getGame,
   replayGame, undoLast, stats, exportJSON, importJSON, migrateLegacy,
   SCHEMA_VERSION, StoreError, LEGACY_KEY, abandonGame, currentGame, migrateSchema,
+  archivePlayer, deletePlayer, impactSuppression, classements,
 } from '../js/store.js';
 import { CONFIG } from '../js/engine.js';
 
@@ -486,4 +487,148 @@ test('une sauvegarde venue du futur est refusee avec un message clair', () => {
 
 test('une sauvegarde sans version est refusee', () => {
   throws(() => importJSON(emptyStore(), JSON.stringify({ players: [], games: [] })));
+});
+
+// --- Gestion des joueurs ----------------------------------------------------
+
+test('archiver retire de la selection sans toucher a l historique', () => {
+  let s = base();
+  s = startGame(s, ids(s));
+  const g = s.games[0].id;
+  s = record(s, g, { type: 'SCORE', points: 450, diceLeft: 2 });
+  s = abandonGame(s, g);
+  const [ana] = ids(s);
+  s = archivePlayer(s, ana);
+  assert.equal(s.players.find((p) => p.id === ana).archived, true);
+  assert.equal(s.games.length, 1, 'la partie est intacte');
+  assert.equal(stats(s, ana).turns, 1, 'les statistiques survivent');
+  throws(() => startGame(s, ids(s)));
+  s = archivePlayer(s, ana, false);
+  assert.doesNotThrow(() => startGame(s, ids(s)), 'et c est reversible');
+});
+
+test('on ne peut pas archiver quelqu un qui joue la partie en cours', () => {
+  let s = base();
+  s = startGame(s, ids(s));
+  throws(() => archivePlayer(s, ids(s)[0]));
+});
+
+test('un joueur sans partie se supprime sans consequence', () => {
+  let s = base();
+  const [ana] = ids(s);
+  s = deletePlayer(s, ana);
+  assert.equal(s.players.length, 1);
+});
+
+test('supprimer un joueur qui a joue exige de confirmer la perte des parties', () => {
+  let s = base();
+  s = startGame(s, ids(s));
+  s = abandonGame(s, s.games[0].id);
+  const [ana] = ids(s);
+  throws(() => deletePlayer(s, ana));           // refus par defaut
+  const apres = deletePlayer(s, ana, { withGames: true });
+  assert.equal(apres.players.length, 1);
+  assert.equal(apres.games.length, 0, 'une partie ne peut pas rester amputee');
+});
+
+test('l impact d une suppression est chiffre avant d etre subi', () => {
+  let s = base();
+  s = startGame(s, ids(s));
+  const g = s.games[0].id;
+  const [ana, bruno] = ids(s);
+  for (const e of [
+    { type: 'SCORE', points: 10000, diceLeft: 2 }, { type: 'DECLINE_CARRY' },
+    { type: 'SCORE', points: 250, diceLeft: 2 },
+  ]) s = record(s, g, e);
+  assert.equal(stats(s, ana).wins, 1);
+  const impact = impactSuppression(s, bruno);
+  assert.equal(impact.joueur, 'Bruno');
+  assert.equal(impact.parties, 1);
+  assert.deepEqual(impact.affectes, [{ id: ana, name: 'Ana', parties: 1, victoires: 1 }]);
+  // Et le chiffre annonce se realise vraiment.
+  const apres = deletePlayer(s, bruno, { withGames: true });
+  assert.equal(stats(apres, ana).wins, 0, 'la victoire d Ana disparait avec la partie');
+});
+
+// --- Statistiques completes (§7) -------------------------------------------
+
+function partieDeReference() {
+  let s = base();
+  s = startGame(s, ids(s), 'Chez Marc');
+  const g = s.games[0].id;
+  const [ana, bruno] = ids(s);
+  for (const e of [
+    { type: 'SCORE', points: 450, diceLeft: 2 },   // Ana marque, laisse 2 des
+    { type: 'TAKE_CARRY' },                        // Bruno reprend 450
+    { type: 'SCORE', points: 900, diceLeft: 1 },   // et encaisse 900
+    { type: 'TAKE_CARRY' },                        // Ana reprend 900
+    { type: 'Z' },                                 // et perd tout : rien ne reste
+    { type: 'SCORE', points: 300, diceLeft: 3 },   // Bruno repart donc a 5 des
+  ]) s = record(s, g, e);
+  return { s, g, ana, bruno };
+}
+
+test('les reprises sont comptees : proposees, prises, reussies, perdues', () => {
+  const { s, ana, bruno } = partieDeReference();
+  const a = stats(s, ana);
+  const b = stats(s, bruno);
+  assert.equal(b.carryOffered, 1, 'une seule offre lui a ete faite');
+  assert.equal(b.carryTaken, 1);
+  assert.equal(b.carryWon, 1);
+  assert.equal(b.carryRate, 100, 'il a pris la seule offre recue');
+  assert.equal(b.carrySuccess, 100);
+  assert.equal(b.turns, 2, 'un Z ne laisse aucun de : son second tour part de zero');
+  assert.equal(a.carryOffered, 1);
+  assert.equal(a.carryTaken, 1);
+  assert.equal(a.carryLost, 1);
+});
+
+test('la prime de risque mesure ce que reprendre rapporte, moins ce qu il coute', () => {
+  const { s, ana, bruno } = partieDeReference();
+  const b = stats(s, bruno);
+  assert.equal(b.carryGained, 900, 'il a encaisse 900 sur une reprise');
+  assert.equal(b.carryLostPoints, 0);
+  assert.equal(b.riskPremium, 900);
+  const a = stats(s, ana);
+  assert.equal(a.carryGained, 0);
+  assert.equal(a.carryLostPoints, 900, 'elle a perdu les 900 herites');
+  assert.equal(a.riskPremium, -900, 'sa prime de risque est negative');
+});
+
+test('les statistiques du §7 absentes jusqu ici sont la', () => {
+  const { s, ana } = partieDeReference();
+  const a = stats(s, ana);
+  assert.equal(a.maxPunitive, 1, 'serie punitive maximale');
+  assert.equal(typeof a.avgTurnsPerGame, 'number');
+  assert.deepEqual(a.topOpponents, [], 'aucun adversaire tant que rien n est termine');
+  assert.equal(a.bestStreak, 1, 'meilleure serie de tours valides');
+  assert.equal(a.avgDiceLeft, 2, 'des laisses en moyenne');
+  assert.equal(a.validRate, 50, 'un tour valide sur deux');
+});
+
+test('adversaires et lieux les plus frequents apparaissent une fois la partie finie', () => {
+  let s = base();
+  s = startGame(s, ids(s), 'Porto');
+  const g = s.games[0].id;
+  const [ana] = ids(s);
+  for (const e of [
+    { type: 'SCORE', points: 10000, diceLeft: 2 }, { type: 'DECLINE_CARRY' },
+    { type: 'SCORE', points: 250, diceLeft: 2 },
+  ]) s = record(s, g, e);
+  const a = stats(s, ana);
+  assert.deepEqual(a.topOpponents, [['Bruno', 1]]);
+  assert.deepEqual(a.topPlaces, [['Porto', 1]]);
+});
+
+test('les classements couvrent toutes les colonnes du §7', () => {
+  const { s } = partieDeReference();
+  const c = classements(s);
+  const titres = c.map((x) => x.titre);
+  for (const attendu of ['Victoires', 'Taux de victoire', 'Plus gros tour', 'Z', 'Z+', 'Pénalités']) {
+    assert.ok(titres.includes(attendu), `colonne manquante : ${attendu}`);
+  }
+  assert.ok(titres.includes('Prime de risque'));
+  const primes = c.find((x) => x.titre === 'Prime de risque').rangs;
+  assert.equal(primes[0].name, 'Bruno', 'le meilleur repreneur est en tete');
+  assert.equal(primes.at(-1).name, 'Ana');
 });

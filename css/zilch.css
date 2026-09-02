@@ -311,3 +311,29 @@ table.bareme td:last-child{ text-align:right; font-family:var(--serif); font-wei
 
 #flash .nom{ display:block; font-size:8vw; letter-spacing:.06em; margin-bottom:-1vw;
   text-transform:uppercase; opacity:.92 }
+
+/* --- Lot 4 : joueurs et statistiques -------------------------------------- */
+
+.puce.archive{ opacity:.55 }
+.actions-joueur{ display:grid; gap:8px; margin-top:10px }
+.actions-joueur .duo{ margin:0 }
+button.danger{ background:var(--terre); border-color:#8C4029; color:var(--blanc) }
+[data-theme="tableau"] button.danger{ background:transparent; color:var(--accent);
+  border:2px solid var(--accent) }
+
+.bloc-stat{ margin:14px 0 0 }
+.bloc-stat > .legende{ margin-bottom:6px }
+.kpi.fort b{ font-size:21px }
+.kpi.positif b{ color:var(--vert) }
+.kpi.negatif b{ color:var(--terre) }
+.jauge{ height:7px; border-radius:4px; background:var(--creme-ombre); overflow:hidden; margin-top:5px }
+.jauge span{ display:block; height:100%; background:var(--cobalt) }
+[data-theme="tableau"] .jauge{ background:var(--trait); border-radius:0 }
+[data-theme="tableau"] .jauge span{ background:var(--accent) }
+.rangs{ display:flex; flex-wrap:wrap; gap:6px }
+.rangs .rang-item{ font-size:13px; padding:5px 9px; border:1px solid var(--creme-ombre);
+  border-radius:20px; background:var(--blanc) }
+.rangs .rang-item.premier{ border-color:var(--or); font-weight:700 }
+[data-theme="tableau"] .rangs .rang-item{ border-radius:0; background:var(--panneau);
+  border-color:var(--trait) }
+[data-theme="tableau"] .rangs .rang-item.premier{ border-color:var(--signal); color:var(--signal) }

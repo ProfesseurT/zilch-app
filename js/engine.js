@@ -72,6 +72,10 @@ function replay(events, players, config) {
     finalRemaining: 0,
     penalties: [],   // trace de chaque -1000 : {id, nominal, applied}
     turns: [],       // un tour termine = une ligne. Voir endTurn().
+    // Ce qui etait sur la table au DEBUT du tour courant. Distinct de `pending`,
+    // que DECLINE_CARRY remet a null : sans cette trace, on ne saurait jamais
+    // combien de reprises ont ete PROPOSEES, seulement combien ont ete prises.
+    offreEnCours: null,
     winner: null,
     events: [],
   };
@@ -157,9 +161,18 @@ function endTurn(s, outcome, nextPending = null) {
   const penalitesAvant = s.penalties.length;
   const etaitUneReprise = s.carryTaken;
   const essaisConsommes = s.attempts;
+  const offre = s.offreEnCours;
+  // La mise reellement risquee par un repreneur : le total herite. C'est ce
+  // qu'il perd sur un lancer blanc, et le seul chiffre qui permette de dire si
+  // reprendre lui rapporte ou lui coute.
+  const mise = etaitUneReprise && offre ? offre.score : 0;
 
+  let punitifAtteint = 0;
   if (outcome === 'Z' || outcome === 'Z_PLUS') {
     s.punitive[id] += outcome === 'Z' ? s.config.zPoints : s.config.zPlusPoints;
+    // Le pic AVANT la remise a zero de la penalite : sans lui, la « serie
+    // punitive maximale » du §7 ne pourrait jamais depasser le seuil moins un.
+    punitifAtteint = s.punitive[id];
     if (s.punitive[id] >= s.config.punitiveThreshold) {
       applyPenalty(s, id);
     }
@@ -168,7 +181,7 @@ function endTurn(s, outcome, nextPending = null) {
     s.pending = s.config.chainCarryOver || !s.carryTaken ? nextPending : null;
   }
 
-  inscrireTour(s, id, outcome, nextPending, penalitesAvant, etaitUneReprise, essaisConsommes);
+  inscrireTour(s, id, outcome, nextPending, penalitesAvant, etaitUneReprise, essaisConsommes, offre, mise, punitifAtteint);
 
   // Declenchement ou progression du dernier tour.
   if (s.status === 'FINAL_ROUND') {
@@ -183,6 +196,7 @@ function endTurn(s, outcome, nextPending = null) {
   s.activeIndex = (s.activeIndex + 1) % s.players.length;
   s.attempts = 0;
   s.carryTaken = false;
+  s.offreEnCours = s.pending;   // ce que le joueur suivant trouvera sur la table
 }
 
 // §7 : le moteur est le seul a savoir qu'un tour se termine et a qui il
@@ -190,13 +204,17 @@ function endTurn(s, outcome, nextPending = null) {
 // dise. Il l'inscrit donc ici, une fois. Les statistiques n'ont plus qu'a
 // compter ces lignes. Toute autre facon de recompter les tours diverge du
 // moteur : c'est exactement ce qui rendait les statistiques fausses.
-function inscrireTour(s, id, outcome, nextPending, penalitesAvant, reprise, essais) {
+function inscrireTour(s, id, outcome, nextPending, penalitesAvant, reprise, essais, offre, mise, pic) {
   s.turns.push({
     playerId: id,
     outcome,                                          // 'SCORE' | 'Z' | 'Z_PLUS'
     points: outcome === 'SCORE' ? nextPending?.score ?? 0 : 0,
     diceLeft: outcome === 'SCORE' ? nextPending?.dice ?? null : null,
-    carry: reprise,
+    carry: reprise,                                   // a-t-il repris ?
+    offered: offre ? offre.score : 0,                 // lui avait-on propose ?
+    offeredDice: offre ? offre.dice : null,
+    stake: mise,                                      // ce qu'il risquait en reprenant
+    punitiveReached: pic,                             // pic du compteur punitif a ce tour
     attempts: essais,
     penalty: s.penalties.length > penalitesAvant ? s.penalties.at(-1) : null,
   });
