@@ -72,7 +72,53 @@ document.addEventListener('click', (e) => {
 
 // --- Persistance ------------------------------------------------------------
 
-const sauver = () => idb.save(S);
+let ephemere = false;   // le stockage est inaccessible : on joue sans filet
+
+/**
+ * Sauve, et dit la verite si ca echoue.
+ *
+ * Avant, un echec d'ecriture etait totalement silencieux : l'ecran se figeait,
+ * aucun message, et l'utilisateur retapait — deuxieme evenement en memoire,
+ * divergence entre l'ecran et le disque. Desormais l'etat en memoire revient
+ * a ce qui est REELLEMENT ecrit, et on le dit.
+ *
+ * @param {object} avant l'etat a restaurer si l'ecriture echoue
+ */
+async function sauver(avant = null) {
+  if (ephemere) return true;   // rien a ecrire, l'utilisateur a ete prevenu
+  try {
+    await idb.save(S);
+    return true;
+  } catch (err) {
+    if (avant) S = avant;
+    alerteStockage(err);
+    return false;
+  }
+}
+
+/** Le seul chemin d'export : il note aussi la date, personne d'autre ne le fait. */
+async function exporter() {
+  idb.downloadBackup(store.exportJSON(S));
+  const avant = S;
+  S = { ...S, settings: { ...S.settings, lastExportAt: new Date().toISOString() } };
+  await sauver(avant);
+  rendreAccueil();
+}
+
+function alerteStockage(err) {
+  const m = el(`<div class="modale"><div class="boite">
+    <p class="legende">Sauvegarde impossible</p>
+    <p>${esc(err?.message || 'Le stockage a refuse l\'ecriture.')}</p>
+    <p class="legende">Ta dernière action n'a pas été enregistrée. Exporte tes données
+       maintenant, puis recommence-la.</p>
+    <button class="or" id="b-sos-export">Exporter maintenant</button>
+    <button class="discret espace" id="b-sos-fermer">J'ai compris</button>
+  </div></div>`);
+  $('modale').innerHTML = '';
+  $('modale').append(m);
+  $('b-sos-export').onclick = () => { idb.downloadBackup(store.exportJSON(S)); };
+  $('b-sos-fermer').onclick = () => { $('modale').innerHTML = ''; rendrePartie(); };
+}
 
 // --- Sons : iOS exige un geste utilisateur avant toute lecture --------------
 
@@ -97,9 +143,7 @@ function flasher(mot, couleur) {
 
 // --- Accueil ----------------------------------------------------------------
 
-function partieEnCours() {
-  return S.games.find((g) => g.status === 'IN_PROGRESS' || g.status === 'FINAL_ROUND') ?? null;
-}
+const partieEnCours = () => store.currentGame(S);
 
 function rendreThemes() {
   const actuel = document.documentElement.dataset.theme;
@@ -110,16 +154,41 @@ function rendreThemes() {
       <span class="apercu" style="background:${t.teinte}"></span>${t.nom}</button>`);
     b.onclick = async () => {
       const choisi = poserTheme(t.id);
+      const etatDisque = S;
       S = { ...S, settings: { ...S.settings, theme: choisi } };
-      await sauver();
+      await sauver(etatDisque);
       rendreThemes();
     };
     root.append(b);
   }
 }
 
+// §8.2 : l'export est le seul filet reel. Une sauvegarde qu'il faut penser a
+// declencher n'est jamais faite — donc on rappelle son age, a l'endroit ou on
+// passe forcement.
+function rendreRappelExport() {
+  const zone = $('rappel-export');
+  zone.innerHTML = '';
+  if (!S.games.length) return;
+  const dernier = S.settings?.lastExportAt;
+  const jours = dernier ? Math.floor((Date.now() - new Date(dernier)) / 86400000) : null;
+  const partiesDepuis = dernier
+    ? S.games.filter((g) => (g.finishedAt || g.createdAt) > dernier).length
+    : S.games.length;
+  if (dernier && partiesDepuis === 0) return;
+  const texte = dernier
+    ? `Dernière sauvegarde il y a ${jours} jour${jours > 1 ? 's' : ''} — ${partiesDepuis} partie${partiesDepuis > 1 ? 's' : ''} depuis.`
+    : 'Tes parties ne sont sauvegardées nulle part.';
+  const b = el(`<div class="bandeau ${dernier ? 'info' : 'alerte'}">
+    <b>${esc(texte)}</b>
+    <button class="discret espace" id="b-export-rappel">Exporter maintenant</button></div>`);
+  zone.append(b);
+  $('b-export-rappel').onclick = exporter;
+}
+
 function rendreAccueil() {
   rendreThemes();
+  rendreRappelExport();
   const g = partieEnCours();
   const b = $('b-reprendre');
   b.hidden = !g;
@@ -150,9 +219,10 @@ function rendreJoueurs() {
 $('b-ajouter').onclick = async () => {
   const champ = $('nouveau-nom');
   try {
+    const etatDisque = S;
     S = store.addPlayer(S, champ.value);
     champ.value = '';
-    await sauver();
+    if (!(await sauver(etatDisque))) return;
     rendreJoueurs();
     dire('m-joueurs', 'Joueur ajouté.', 'ok');
   } catch (err) { dire('m-joueurs', err.message, 'ko'); }
@@ -212,11 +282,12 @@ $('b-geo').onclick = () => {
 
 $('b-demarrer').onclick = async () => {
   try {
+    const etatDisque = S;
     S = store.startGame(S, selection, $('lieu').value.trim() || null);
     partieId = S.games.at(-1).id;
     selection = [];
     $('lieu').value = '';
-    await sauver();
+    if (!(await sauver(etatDisque))) return;
     aller('partie');
   } catch (err) { dire('m-nouvelle', err.message, 'ko'); }
 };
@@ -340,14 +411,17 @@ async function commande(evenement) {
 async function executer(g, evenement) {
   const avant = store.replayGame(S, g);
   const joueur = view.activePlayer(avant);
+  const etatDisque = S;                  // ce qui est reellement ecrit
   try {
     S = store.record(S, g.id, evenement);
   } catch (err) {
     dire('m-tour', err.message, 'ko');
     return;
   }
+  // Ecrire d'abord. Ni son, ni flash, ni message tant que ce n'est pas sur le
+  // disque : celebrer un tour qui n'a pas ete enregistre est un mensonge.
+  if (!(await sauver(etatDisque))) return;
   const apres = store.replayGame(S, laPartie());
-  await sauver();
 
   // Le moteur trace chaque penalite. On compare le nombre de traces avant et
   // apres : aucune regle ici, aucun seuil recalcule. La comparaison des scores
@@ -401,8 +475,9 @@ async function annuler() {
   actionEnCours = true;
   armerBoutons(false);
   try {
+    const etatDisque = S;
     S = store.undoLast(S, g.id);   // rejeu integral, jamais une soustraction
-    await sauver();
+    if (!(await sauver(etatDisque))) return;
     $('modale').innerHTML = '';
     $('modale').dataset.pour = '';
     desChoisis = null;
@@ -428,11 +503,13 @@ $('b-abandon').onclick = () => {
   $('modale').append(m);
   $('b-abandon-non').onclick = () => { $('modale').innerHTML = ''; };
   $('b-abandon-oui').onclick = async () => {
-    S = { ...S, games: S.games.map((x) => (x.id === g.id ? { ...x, status: 'ABANDONED', finishedAt: new Date().toISOString() } : x)) };
-    await sauver();
+    const etatDisque = S;
+    S = store.abandonGame(S, g.id);   // etat de cycle de vie : decide dans le store
+    if (!(await sauver(etatDisque))) return;
     $('modale').innerHTML = '';
     partieId = null;
-    aller('historique');
+    // §8.2 : l'export est propose a la fin de CHAQUE partie, arret compris.
+    aller('accueil');
   };
 };
 
@@ -455,7 +532,7 @@ function montrerVainqueur(g, etat) {
   $('modale').innerHTML = '';
   $('modale').append(m);
   // §8.2 : l'export est propose a la fin de chaque partie, refusable en un tap.
-  $('b-sauver-fin').onclick = () => { idb.downloadBackup(store.exportJSON(S)); };
+  $('b-sauver-fin').onclick = exporter;
   // Sans ce bouton, un score mal tape au dernier tour terminait la partie sans
   // aucun retour possible : la modale couvrait le seul bouton Annuler.
   $('b-annuler-fin').onclick = annuler;
@@ -485,19 +562,26 @@ function rendreHistorique() {
   }
 }
 
-$('b-exporter').onclick = () => {
-  idb.downloadBackup(store.exportJSON(S));
-  dire('m-donnees', 'Sauvegarde exportée. Range-la dans Fichiers ou iCloud.', 'ok');
+$('b-exporter').onclick = async () => {
+  await exporter();
+  dire('m-donnees', 'Sauvegarde exportée. Range-la dans Fichiers ou iCloud Drive.', 'ok');
 };
 $('b-importer').onclick = () => $('fichier').click();
 $('fichier').onchange = async (e) => {
   const f = e.target.files?.[0];
   if (!f) return;
   try {
-    S = store.importJSON(S, await f.text());   // fusionne, n'ecrase jamais
-    await sauver();
+    const etatDisque = S;
+    S = store.importJSON(S, await f.text());
+    if (!(await sauver(etatDisque))) return;
+    const r = S.lastImport;
+    const bouts = [];
+    if (r.players) bouts.push(`${r.players} joueur${r.players > 1 ? 's' : ''}`);
+    if (r.games) bouts.push(`${r.games} partie${r.games > 1 ? 's' : ''}`);
+    if (r.repaired) bouts.push(`${r.repaired} partie${r.repaired > 1 ? 's' : ''} complétée${r.repaired > 1 ? 's' : ''}`);
     rendreHistorique();
-    dire('m-donnees', 'Sauvegarde importée et fusionnée.', 'ok');
+    rendreAccueil();
+    dire('m-donnees', bouts.length ? `Importé : ${bouts.join(', ')}.` : 'Rien de nouveau : tout y était déjà.', 'ok');
   } catch (err) { dire('m-donnees', err.message, 'ko'); }
   e.target.value = '';
 };

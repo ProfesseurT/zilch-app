@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import {
   emptyStore, addPlayer, renamePlayer, startGame, record, getGame,
   replayGame, undoLast, stats, exportJSON, importJSON, migrateLegacy,
-  SCHEMA_VERSION, StoreError, LEGACY_KEY,
+  SCHEMA_VERSION, StoreError, LEGACY_KEY, abandonGame, currentGame, migrateSchema,
 } from '../js/store.js';
+import { CONFIG } from '../js/engine.js';
 
 const throws = (fn) => assert.throws(fn, StoreError);
 
@@ -41,9 +42,50 @@ test('un joueur peut etre renomme sans perdre son identifiant', () => {
 test('les joueurs sont reutilises, jamais dupliques entre parties', () => {
   let s = base();
   s = startGame(s, ids(s));
+  s = abandonGame(s, s.games.at(-1).id);
   s = startGame(s, ids(s));
-  assert.equal(s.players.length, 2);
+  assert.equal(s.players.length, 2, 'les memes joueurs, references, jamais copies');
   assert.equal(s.games.length, 2);
+});
+
+test('une seule partie peut etre en cours a la fois', () => {
+  let s = base();
+  s = startGame(s, ids(s));
+  throws(() => startGame(s, ids(s)));
+  assert.equal(currentGame(s).id, s.games[0].id);
+  s = abandonGame(s, s.games[0].id);
+  assert.equal(currentGame(s), null, 'une partie arretee ne compte plus');
+  assert.doesNotThrow(() => startGame(s, ids(s)));
+});
+
+test('une partie arretee le reste : ni evenement, ni annulation', () => {
+  let s = base();
+  s = startGame(s, ids(s));
+  const g = s.games[0].id;
+  s = record(s, g, { type: 'SCORE', points: 450, diceLeft: 2 });
+  s = abandonGame(s, g);
+  assert.equal(getGame(s, g).status, 'ABANDONED');
+  throws(() => record(s, g, { type: 'DECLINE_CARRY' }));
+  throws(() => undoLast(s, g));
+  assert.equal(getGame(s, g).status, 'ABANDONED', 'toujours arretee');
+});
+
+test('une partie fige les regles sous lesquelles elle a ete jouee', () => {
+  let s = base();
+  s = startGame(s, ids(s));
+  const g = s.games[0].id;
+  assert.equal(getGame(s, g).config.minTurn, CONFIG.minTurn, 'les regles du moment sont copiees');
+  assert.equal(getGame(s, g).config.target, CONFIG.target);
+
+  // Une partie jouee sous d'autres regles continue d'obeir aux SIENNES, jamais
+  // a celles du moment. Ici un plancher a 100 : un score de 150 passe, alors
+  // que la configuration courante l'aurait refuse.
+  s = { ...s, games: s.games.map((x) => (x.id === g ? { ...x, config: { ...x.config, minTurn: 100 } } : x)) };
+  s = record(s, g, { type: 'SCORE', points: 150, diceLeft: 2 });
+  const etat = replayGame(s, getGame(s, g));
+  assert.equal(etat.config.minTurn, 100, 'le rejeu utilise la config de la partie');
+  assert.equal(etat.scores[getGame(s, g).order[0]], 150);
+  assert.equal(CONFIG.minTurn, 250, 'et la configuration globale n a pas bouge');
 });
 
 // --- Parties et rejeu -------------------------------------------------------
@@ -366,4 +408,82 @@ test('les tours d une partie inachevee comptent quand meme', () => {
   const a = stats(s, ana);
   assert.equal(a.games, 0, 'aucune partie terminee');
   assert.equal(a.turns, 2, 'mais ses tours existent');
+});
+
+// --- Import : reparer, ne rien perdre --------------------------------------
+
+function deuxAppareils() {
+  let complet = base();
+  complet = startGame(complet, ids(complet));
+  const g = complet.games[0].id;
+  for (const e of [
+    { type: 'SCORE', points: 450, diceLeft: 2 }, { type: 'DECLINE_CARRY' },
+    { type: 'Z' }, { type: 'SCORE', points: 300, diceLeft: 1 },
+  ]) complet = record(complet, g, e);
+  // Le meme appareil, mais une ecriture a echoue : les 2 derniers evenements manquent.
+  const tronque = {
+    ...complet,
+    games: complet.games.map((x) => ({ ...x, events: x.events.slice(0, 2) })),
+  };
+  return { complet, tronque, g };
+}
+
+test('l import repare une partie tronquee au lieu de l ignorer', () => {
+  const { complet, tronque, g } = deuxAppareils();
+  const repare = importJSON(tronque, exportJSON(complet));
+  assert.equal(getGame(repare, g).events.length, 4, 'la version la plus complete gagne');
+  assert.equal(repare.lastImport.repaired, 1);
+  assert.equal(repare.games.length, 1, 'et la partie n est pas dupliquee');
+});
+
+test('l import n ecrase jamais une partie plus complete par une plus courte', () => {
+  const { complet, tronque, g } = deuxAppareils();
+  const inchange = importJSON(complet, exportJSON(tronque));
+  assert.equal(getGame(inchange, g).events.length, 4);
+  assert.equal(inchange.lastImport.repaired, 0);
+});
+
+test('l import conserve les reglages et l archive de l ancienne application', () => {
+  let s = migrateLegacy({ players: ['Ana', 'Bruno'], games: [{ id: 'vieille', truc: 1 }] });
+  s = { ...s, settings: { ...s.settings, theme: 'tableau' } };
+  const retour = importJSON(emptyStore(), exportJSON(s));
+  assert.deepEqual(retour.legacyArchive.games[0], { id: 'vieille', truc: 1 }, 'l archive survit');
+  assert.equal(retour.migratedFrom, LEGACY_KEY);
+  assert.equal(retour.settings.theme, 'tableau', 'le theme survit');
+});
+
+test('un aller-retour export/import ne perd rien', () => {
+  const { complet } = deuxAppareils();
+  const retour = importJSON(emptyStore(), exportJSON(complet));
+  assert.equal(retour.players.length, complet.players.length);
+  assert.equal(retour.games.length, complet.games.length);
+  assert.deepEqual(retour.games[0].events, complet.games[0].events);
+  assert.deepEqual(retour.games[0].config, complet.games[0].config, 'les regles de la partie survivent');
+});
+
+test('une partie mal formee est refusee, les donnees existantes intactes', () => {
+  const s = base();
+  for (const partie of [null, {}, { id: 'x', order: [], events: [] }, { id: 'x', order: ['a'] }]) {
+    throws(() => importJSON(s, JSON.stringify({ schema: SCHEMA_VERSION, players: [], games: [partie] })));
+  }
+  assert.equal(s.players.length, 2, 'rien n a bouge');
+});
+
+// --- Montee de version du schema -------------------------------------------
+
+test('une sauvegarde plus ancienne est montee de version, pas rejetee', () => {
+  const v1 = { schema: 1, players: [{ id: 'p1', name: 'Ana' }], games: [] };
+  const monte = migrateSchema(v1);
+  assert.equal(monte.schema, SCHEMA_VERSION);
+  assert.equal(monte.players[0].name, 'Ana');
+  assert.doesNotThrow(() => importJSON(emptyStore(), JSON.stringify(v1)));
+});
+
+test('une sauvegarde venue du futur est refusee avec un message clair', () => {
+  const futur = JSON.stringify({ schema: SCHEMA_VERSION + 1, players: [], games: [] });
+  assert.throws(() => importJSON(emptyStore(), futur), (err) => /plus recente/.test(err.message));
+});
+
+test('une sauvegarde sans version est refusee', () => {
+  throws(() => importJSON(emptyStore(), JSON.stringify({ players: [], games: [] })));
 });

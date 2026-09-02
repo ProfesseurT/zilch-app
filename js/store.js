@@ -3,7 +3,7 @@
 // migration et d'export vit ici, donc elle est testable sans navigateur.
 // L'adaptateur IndexedDB (idb.js) se contente de charger et sauver ce contenu.
 
-import { createGame, apply, replayAll } from './engine.js';
+import { createGame, apply, replayAll, CONFIG } from './engine.js';
 
 export const SCHEMA_VERSION = 2;
 export const LEGACY_KEY = 'dixmille_compagnon_v1';
@@ -43,6 +43,9 @@ export function renamePlayer(store, id, name) {
 
 export function startGame(store, playerIds, location = null) {
   if (playerIds.length < 2) throw new StoreError('Il faut au moins deux joueurs.');
+  // Une seconde partie en cours devenait invisible : l'ecran d'accueil ne
+  // rouvrait que la premiere, et l'historique ne liste que les parties finies.
+  if (currentGame(store)) throw new StoreError('Une partie est deja en cours.');
   const unknown = playerIds.filter((id) => !store.players.some((p) => p.id === id));
   if (unknown.length) throw new StoreError(`Joueur inconnu : ${unknown[0]}`);
   const game = {
@@ -54,6 +57,11 @@ export function startGame(store, playerIds, location = null) {
     events: [],       // seule source de verite : l'etat se rejoue depuis ici
     status: 'IN_PROGRESS',
     winner: null,
+    // Les regles sont figees ICI, a la creation. Sans cela, une partie archivee
+    // serait rejouee avec la configuration courante : changer le plancher ou
+    // l'objectif rendrait tout l'historique illisible, ecrans vides et sans
+    // message. Le §12 autorise explicitement un objectif reglable.
+    config: { ...CONFIG },
   };
   return { ...store, games: store.games.concat([game]) };
 }
@@ -62,6 +70,7 @@ export function startGame(store, playerIds, location = null) {
 export function record(store, gameId, event) {
   const game = getGame(store, gameId);
   if (game.status === 'FINISHED') throw new StoreError('La partie est terminee.');
+  if (game.status === 'ABANDONED') throw new StoreError('La partie a ete arretee.');
   const next = apply(replayGame(store, game), event); // le moteur valide ou refuse
   const updated = {
     ...game,
@@ -71,6 +80,22 @@ export function record(store, gameId, event) {
     finishedAt: next.status === 'FINISHED' ? new Date().toISOString() : null,
   };
   return { ...store, games: store.games.map((g) => (g.id === gameId ? updated : g)) };
+}
+
+/**
+ * Arrete une partie sans vainqueur. Un etat de cycle de vie n'a rien a faire
+ * dans un gestionnaire de bouton : il se decide ici, et il est teste.
+ */
+export function abandonGame(store, gameId) {
+  const game = getGame(store, gameId);
+  if (game.status === 'FINISHED') throw new StoreError('La partie est deja terminee.');
+  const updated = { ...game, status: 'ABANDONED', finishedAt: new Date().toISOString() };
+  return { ...store, games: store.games.map((g) => (g.id === gameId ? updated : g)) };
+}
+
+/** La partie en cours, s'il y en a une. Il ne peut y en avoir qu'une. */
+export function currentGame(store) {
+  return store.games.find((g) => g.status === 'IN_PROGRESS' || g.status === 'FINAL_ROUND') ?? null;
 }
 
 export function getGame(store, gameId) {
@@ -88,16 +113,17 @@ export function replayGame(store, game) {
   // Une seule passe. L'ancienne version enchainait un apply() par evenement,
   // chacun rejouant tout depuis zero : 22 155 transitions pour une partie de
   // 105 tours au lieu de 210, et l'ecran Stats les payait pour chaque joueur.
-  return replayAll(game.events, players);
+  return replayAll(game.events, players, game.config ?? CONFIG);
 }
 
 /** Annule la derniere action d'une partie. */
 export function undoLast(store, gameId) {
   const game = getGame(store, gameId);
+  if (game.status === 'ABANDONED') throw new StoreError('La partie a ete arretee.');
   if (game.events.length === 0) return store;
   const events = game.events.slice(0, -1);
   const players = game.order.map((id) => ({ id, name: '' }));
-  const state = events.reduce((s, e) => apply(s, e), createGame(players));
+  const state = replayAll(events, players, game.config ?? CONFIG);
   const updated = { ...game, events, status: state.status, winner: state.winner, finishedAt: null };
   return { ...store, games: store.games.map((g) => (g.id === gameId ? updated : g)) };
 }
@@ -165,8 +191,50 @@ export function exportJSON(store) {
 }
 
 /**
- * Importe une sauvegarde. Par defaut fusionne sans rien ecraser :
- * les joueurs et parties deja presents (meme identifiant) sont conserves tels quels.
+ * Montee de version d'une sauvegarde.
+ *
+ * Sans elle, le jour ou SCHEMA_VERSION passe a 3, TOUS les fichiers JSON deja
+ * exportes deviennent illisibles — et c'est la seule vraie sauvegarde de
+ * l'utilisateur (ADR-4). Ajouter une version = ajouter une entree ici, avec
+ * son test. Ne jamais se contenter de relever SCHEMA_VERSION.
+ */
+const MONTEES = {
+  // 1 -> 2 : aucune sauvegarde v1 n'a jamais ete produite par cette
+  // application. L'entree existe pour que la mecanique soit en place et testee.
+  1: (d) => ({ ...d, schema: 2 }),
+};
+
+export function migrateSchema(data) {
+  let d = data;
+  let v = Number(d?.schema);
+  if (!Number.isFinite(v)) throw new StoreError('Version de sauvegarde absente.');
+  if (v > SCHEMA_VERSION) {
+    throw new StoreError(
+      `Cette sauvegarde vient d'une version plus recente de ZILCH (${v}). Mets l'application a jour.`,
+    );
+  }
+  while (v < SCHEMA_VERSION) {
+    const monter = MONTEES[v];
+    if (!monter) throw new StoreError(`Aucune montee de version connue depuis le schema ${v}.`);
+    d = monter(d);
+    const suivant = Number(d.schema);
+    if (!(suivant > v)) throw new StoreError(`La montee depuis ${v} n'a pas avance.`);
+    v = suivant;
+  }
+  return d;
+}
+
+/**
+ * Importe une sauvegarde.
+ *
+ * Fusionne par defaut, et ne detruit jamais rien :
+ * - un joueur ou une partie deja present est conserve ;
+ * - SAUF si la sauvegarde contient une version PLUS COMPLETE de la meme partie
+ *   (plus d'evenements). C'est le cas d'un appareil ou une ecriture a echoue :
+ *   avant, l'import annoncait « fusionnee » et ne reparait rien ;
+ * - les reglages sont fusionnes, jamais remplaces par du vide ;
+ * - `legacyArchive` et `migratedFrom` survivent : c'est l'ancienne application,
+ *   et rien d'autre ne la conserve.
  */
 export function importJSON(store, json, { mode = 'merge' } = {}) {
   let data;
@@ -176,22 +244,48 @@ export function importJSON(store, json, { mode = 'merge' } = {}) {
     throw new StoreError('Fichier illisible : ce n\'est pas du JSON valide.');
   }
   if (!data || typeof data !== 'object') throw new StoreError('Fichier vide ou invalide.');
-  if (data.schema !== SCHEMA_VERSION) {
-    throw new StoreError(`Version de sauvegarde inconnue (${data.schema ?? 'absente'}), attendu ${SCHEMA_VERSION}.`);
-  }
+  data = migrateSchema(data);
   if (!Array.isArray(data.players) || !Array.isArray(data.games)) {
     throw new StoreError('Structure inattendue : joueurs ou parties manquants.');
   }
-  if (mode === 'replace') {
-    return { ...emptyStore(), players: data.players, games: data.games, settings: data.settings ?? emptyStore().settings };
+  for (const g of data.games) {
+    if (!g || typeof g !== 'object' || !g.id || !Array.isArray(g.order) || !g.order.length || !Array.isArray(g.events)) {
+      throw new StoreError('Structure inattendue : une partie est incomplete.');
+    }
   }
-  const knownPlayers = new Set(store.players.map((p) => p.id));
-  const knownGames = new Set(store.games.map((g) => g.id));
-  return {
+
+  const reglages = { ...emptyStore().settings, ...(store.settings ?? {}), ...(data.settings ?? {}) };
+  const archive = data.legacyArchive ?? store.legacyArchive;
+  const venuDe = data.migratedFrom ?? store.migratedFrom;
+
+  if (mode === 'replace') {
+    const remplace = { ...data, schema: SCHEMA_VERSION, settings: reglages };
+    delete remplace.exportedAt;
+    return remplace;
+  }
+
+  const parId = new Map(store.games.map((g) => [g.id, g]));
+  let ajoutees = 0;
+  let completees = 0;
+  for (const g of data.games) {
+    const ici = parId.get(g.id);
+    if (!ici) { parId.set(g.id, g); ajoutees += 1; continue; }
+    if (g.events.length > ici.events.length) { parId.set(g.id, g); completees += 1; }
+  }
+
+  const connus = new Set(store.players.map((p) => p.id));
+  const nouveaux = data.players.filter((p) => p?.id && !connus.has(p.id));
+
+  const fusionne = {
     ...store,
-    players: store.players.concat(data.players.filter((p) => !knownPlayers.has(p.id))),
-    games: store.games.concat(data.games.filter((g) => !knownGames.has(g.id))),
+    players: store.players.concat(nouveaux),
+    games: [...parId.values()],
+    settings: reglages,
+    lastImport: { at: new Date().toISOString(), players: nouveaux.length, games: ajoutees, repaired: completees },
   };
+  if (archive) fusionne.legacyArchive = archive;
+  if (venuDe) fusionne.migratedFrom = venuDe;
+  return fusionne;
 }
 
 // --- Migration depuis l'ancienne version ------------------------------------

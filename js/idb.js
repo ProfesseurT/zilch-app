@@ -24,17 +24,34 @@ function open() {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
     };
+    // Sans ceci, une montee de version bloquee par une autre fenetre laissait
+    // la promesse en suspens pour toujours : ecran de demarrage fige, aucun
+    // message, ni erreur ni succes.
+    req.onblocked = () => reject(new Error('ZILCH est ouvert dans une autre fenetre. Ferme-la, puis reessaie.'));
     req.onsuccess = () => {
       connexion = req.result;
       // Une autre fenetre demande une montee de version : liberer la connexion.
-      connexion.onversionchange = () => {
-        connexion.close();
-        connexion = null;
-      };
+      connexion.onversionchange = () => { connexion.close(); connexion = null; };
+      // Et si le systeme ferme la connexion de lui-meme — mise en veille,
+      // pression memoire — il faut le savoir. Sans ce handler, `connexion`
+      // restait en cache, ferme, et plus AUCUNE sauvegarde n'aboutissait pour
+      // le reste de la soiree, sans le moindre signe.
+      connexion.onclose = () => { connexion = null; };
       resolve(connexion);
     };
     req.onerror = () => reject(req.error);
   });
+}
+
+/** Rejoue une operation une fois si la connexion s'est fermee entre-temps. */
+async function avecConnexion(operation) {
+  try {
+    return await operation(await open());
+  } catch (err) {
+    if (err?.name !== 'InvalidStateError' && err?.name !== 'TransactionInactiveError') throw err;
+    connexion = null;                       // la connexion etait morte : on rouvre
+    return operation(await open());
+  }
 }
 
 function tx(db, mode, fn) {
@@ -85,8 +102,7 @@ export function isInstalled() {
  * au tout premier lancement, quand IndexedDB est vide.
  */
 export async function load() {
-  const db = await open();
-  const trouve = await tx(db, 'readonly', (os) => os.get(KEY));
+  const trouve = await avecConnexion((db) => tx(db, 'readonly', (os) => os.get(KEY)));
   if (trouve) return trouve;
 
   const brut = localStorage.getItem(LEGACY_KEY);
@@ -109,17 +125,24 @@ export async function load() {
   return neuf;
 }
 
+// Les sauvegardes s'enchainent, elles ne se croisent pas : deux ecritures
+// concurrentes de l'etat complet peuvent s'ecraser l'une l'autre, et le
+// dernier arrive n'est pas forcement le plus recent.
+let file = Promise.resolve();
+
 /** Sauve l'etat complet. Remonte une erreur claire si le quota est depasse. */
-export async function save(store) {
-  const db = await open();
-  try {
-    await tx(db, 'readwrite', (os) => os.put(store, KEY));
-  } catch (err) {
-    if (err?.name === 'QuotaExceededError') {
-      throw new Error("Stockage plein. Exportez vos donnees avant d'en enregistrer d'autres.");
+export function save(store) {
+  file = file.catch(() => {}).then(async () => {
+    try {
+      await avecConnexion((db) => tx(db, 'readwrite', (os) => os.put(store, KEY)));
+    } catch (err) {
+      if (err?.name === 'QuotaExceededError') {
+        throw new Error('Stockage plein. Exporte tes donnees avant d\'en enregistrer d\'autres.');
+      }
+      throw err;
     }
-    throw err;
-  }
+  });
+  return file;
 }
 
 /**
@@ -142,6 +165,10 @@ export function downloadBackup(json, filename = `zilch-${new Date().toISOString(
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
+  // L'ancre doit etre DANS le document : sur WebKit, un <a download> detache
+  // ne declenche pas toujours le telechargement.
+  a.style.display = 'none';
+  document.body.append(a);
   a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 1000);
 }
