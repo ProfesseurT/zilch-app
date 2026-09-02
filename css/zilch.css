@@ -54,7 +54,7 @@ button.plein{ background:var(--cobalt); color:var(--blanc); border-color:var(--c
 button.or{ background:var(--or); border-color:#9C7420; color:#2C2005 }
 button.terre{ background:var(--terre); border-color:#8C4029; color:var(--blanc) }
 button.discret{ background:var(--blanc); border-color:var(--bord-discret); color:var(--gris);
-  min-height:48px; font-weight:500 }
+  min-height:44px; font-weight:500; font-size:15px }
 button.geant{ min-height:72px; font-size:20px }
 
 .duo{ display:grid; grid-template-columns:1fr 1fr; gap:10px }
@@ -74,11 +74,11 @@ input.geant{ font-family:var(--serif); font-size:34px; text-align:center; font-w
 /* --- Ecran de partie ---------------------------------------------------- */
 
 .actif-bloc{ background:var(--cobalt); border-color:var(--cobalt-fonce); color:var(--blanc);
-  text-align:center; padding:18px 16px }
-.actif-bloc .qui{ font-family:var(--serif); font-size:30px; font-weight:700; line-height:1.15 }
-.actif-bloc .total{ font-size:44px; font-family:var(--serif); font-weight:700;
-  color:var(--or); line-height:1.1; margin-top:2px }
-.actif-bloc .reste{ font-size:13px; opacity:.86; margin-top:2px }
+  text-align:center; padding:12px 16px }
+.actif-bloc .qui{ font-family:var(--serif); font-size:26px; font-weight:700; line-height:1.1 }
+.actif-bloc .total{ font-size:38px; font-family:var(--serif); font-weight:700;
+  color:var(--or); line-height:1.05 }
+.actif-bloc .reste{ font-size:12px; opacity:.86 }
 .actif-bloc.change{ animation:bascule .16s ease-out }
 @keyframes bascule{ from{ opacity:.25; transform:scale(.985) } to{ opacity:1; transform:none } }
 
@@ -284,8 +284,9 @@ table.bareme td:last-child{ text-align:right; font-family:var(--serif); font-wei
 
 /* --- Lot 3 : ce qui decide, se lit ---------------------------------------- */
 
-.offre{ border-color:var(--or); border-width:2px }
-.offre-texte{ font-size:19px; line-height:1.35; margin:0 0 12px; font-weight:500 }
+.offre{ border-color:var(--or); border-width:2px; padding:11px 12px }
+.offre-texte{ font-size:18px; line-height:1.3; margin:0 0 9px; font-weight:500 }
+#reprise-aide{ margin:7px 0 0; font-size:11px }
 .offre-texte b{ font-weight:700; color:var(--cobalt-fonce) }
 [data-theme="tableau"] .offre{ border-left-color:var(--signal) }
 [data-theme="tableau"] .offre-texte b{ color:var(--signal) }
@@ -294,8 +295,9 @@ table.bareme td:last-child{ text-align:right; font-family:var(--serif); font-wei
 
 /* Compteur punitif dans le bloc du joueur actif : c'est le seul chiffre qui
    annonce le -1000, il etait en 11 px au fond du tableau des scores. */
-.punitif{ display:flex; align-items:center; justify-content:center; gap:7px;
-  margin-top:8px; font-size:13px; letter-spacing:.06em }
+.punitif{ display:flex; align-items:center; justify-content:center; gap:6px;
+  margin-top:5px; font-size:12px; letter-spacing:.05em }
+.punitif:empty{ display:none }
 .punitif .pastille{ width:15px; height:15px; border-radius:50%;
   border:2px solid currentColor; display:inline-block }
 .punitif .pastille.pleine{ background:currentColor }
