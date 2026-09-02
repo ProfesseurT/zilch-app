@@ -656,6 +656,15 @@ function rendreBandeauInstallation(installe) {
   }
 }
 
+// Le service worker est ce qui rend l'application utilisable hors ligne. Son
+// absence ou son echec ne doit JAMAIS empecher de jouer : d'ou le catch muet,
+// et l'enregistrement en dehors de tout ce qui touche au stockage.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+  });
+}
+
 (async function demarrer() {
   $('bareme').innerHTML = DICE_TABLE.map(([nom, pts]) => `<tr><td>${esc(nom)}</td><td>${nb(pts)}</td></tr>`).join('');
   rendreDes();
