@@ -8,14 +8,15 @@ hors ligne, sans compte ni serveur. Application web installée sur l'écran d'ac
     index.html  manifest.json  service-worker.js  icon-*.png   la PWA servie
     js/       engine.js store.js idb.js sounds.js ui.js        le code
     css/      zilch.css                                        deux thèmes
-    tests/    *.test.js + simulate.js                          140 tests
+    tests/    *.test.js + simulate.js                          157 tests
     sons/     13 MP3                                6 Z, 3 Z+, 3 pénalité, 1 victoire
     docs/     specifications.md adr.md              la référence qui fait autorité
     docs/archive/                                   ancienne app, référence seule
+    JOURNAL.md                                      ce qui a été fait, lot par lot
 
 ## Lancer les tests
 
-    npm test          # 140 tests, doit être au vert avant tout changement de phase
+    npm test          # 157 tests, doit être au vert avant tout changement de phase
     npm run simulate  # contrôle d'équilibre, doit retomber sur le §17 de la spec
 
 Aucune installation. Node 18+ suffit, il n'y a pas de `node_modules`.
