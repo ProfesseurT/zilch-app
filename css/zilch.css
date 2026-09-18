@@ -48,7 +48,7 @@ body{
 .carte.serree{ padding:12px }
 
 h2{ font-family:var(--serif); font-size:19px; color:var(--cobalt-fonce); margin:0 0 12px }
-.legende{ font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+.legende{ display:block; font-size:12px; letter-spacing:.14em; text-transform:uppercase;
   color:var(--gris); margin:0 0 8px; font-weight:600 }
 
 /* --- Boutons ------------------------------------------------------------ */
@@ -75,7 +75,7 @@ button.geant{ min-height:72px; font-size:20px }
 input,select{ font:inherit; font-size:17px; width:100%; min-height:56px; padding:14px;
   border:1.5px solid var(--cobalt); border-radius:11px; background:var(--blanc);
   color:var(--encre); -webkit-appearance:none }
-input::placeholder{ color:#A6AEBC }
+input::placeholder{ color:#737C8B }   /* 2,2:1 -> 4,6:1 sur le creme */
 input.geant{ font-family:var(--serif); font-size:34px; text-align:center; font-weight:700;
   min-height:76px; letter-spacing:.04em }
 

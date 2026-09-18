@@ -44,9 +44,10 @@
 <div class="ecran" id="e-joueurs">
   <h1 class="marque">JOUEURS</h1>
   <div class="carte">
+    <label class="legende" for="nouveau-nom">Nom du joueur</label>
     <input id="nouveau-nom" placeholder="Nom du joueur" autocomplete="off" enterkeyhint="done">
     <button class="plein espace" id="b-ajouter">Ajouter</button>
-    <div class="msg" id="m-joueurs"></div>
+    <div class="msg" id="m-joueurs" role="status" aria-live="polite"></div>
   </div>
   <div id="liste-joueurs"></div>
   <div id="liste-archives"></div>
@@ -60,12 +61,12 @@
     <div id="choix-joueurs"></div>
   </div>
   <div class="carte">
-    <p class="legende">Lieu</p>
+    <label class="legende" for="lieu">Lieu</label>
     <input id="lieu" placeholder="Chez Marc, Porto…" autocomplete="off">
     <button class="discret espace" id="b-geo">Utiliser ma position</button>
   </div>
   <button class="plein geant" id="b-demarrer">Démarrer</button>
-  <div class="msg" id="m-nouvelle"></div>
+  <div class="msg" id="m-nouvelle" role="status" aria-live="polite"></div>
 </div>
 
 <!-- PARTIE ------------------------------------------------------------- -->
@@ -97,7 +98,7 @@
       <div class="tableau" id="tableau"></div>
     </div>
 
-    <div class="msg" id="m-tour"></div>
+    <div class="msg" id="m-tour" role="status" aria-live="polite"></div>
     <button class="discret" id="b-annuler">Annuler le dernier tour</button>
     <button class="discret" id="b-abandon">Arrêter la partie</button>
   </div>
@@ -127,7 +128,7 @@
   <p class="legende">Dés laissés sur la table</p>
   <div class="des" id="choix-des"></div>
   <button class="plein geant" id="b-valider">Valider</button>
-  <div class="msg" id="f-msg"></div>
+  <div class="msg" id="f-msg" role="status" aria-live="polite"></div>
 </div>
 
 <!-- HISTORIQUE --------------------------------------------------------- -->
@@ -138,8 +139,8 @@
     <p class="legende">Sauvegarde</p>
     <button id="b-exporter">Exporter mes données</button>
     <button class="discret espace" id="b-importer">Importer un fichier</button>
-    <input id="fichier" type="file" accept="application/json" hidden>
-    <div class="msg" id="m-donnees"></div>
+    <input id="fichier" type="file" accept="application/json" aria-label="Fichier de sauvegarde ZILCH" hidden>
+    <div class="msg" id="m-donnees" role="status" aria-live="polite"></div>
   </div>
 </div>
 

@@ -277,6 +277,6 @@ export const DICE_TABLE = [
   ['Trois 4', 400],
   ['Trois 5', 500],
   ['Trois 6', 600],
-  ['Suite 1-2-3-4-5', 750],
-  ['Suite 2-3-4-5-6', 500],
+  ['Suite 1-2-3-4-5', 500],
+  ['Suite 2-3-4-5-6', 750],
 ];

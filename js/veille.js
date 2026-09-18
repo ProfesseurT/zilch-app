@@ -21,7 +21,15 @@ let souhaite = false;       // l'utilisateur veut-il l'ecran allume ?
 let raison = '';            // pourquoi la derniere demande a echoue
 const abonnes = new Set();
 
-/** L'appareil sait-il faire ? Safari iOS le sait depuis la version 18.4. */
+/**
+ * L'appareil expose-t-il l'API ?
+ *
+ * ATTENTION, ce booleen ne dit PAS que ca marche. Safari iOS expose
+ * `navigator.wakeLock` depuis 16.4, mais dans une application INSTALLEE le
+ * verrou etait accorde puis ignore jusqu'a iOS 18.4 (bug WebKit 254545). Sur
+ * 16.4 -> 18.3 la demande reussit, l'objet est valide, et l'ecran s'eteint.
+ * Rien de detectable ici : c'est a l'interface de ne rien promettre.
+ */
 export function supporte() {
   return typeof navigator !== 'undefined' && 'wakeLock' in navigator;
 }

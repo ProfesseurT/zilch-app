@@ -219,14 +219,16 @@ Il doit être implémenté comme une **table de données de référence**, consu
 | Trois 4 | 400 |
 | Trois 5 | 500 |
 | Trois 6 | 600 |
-| Suite 1-2-3-4-5 | 750 |
-| Suite 2-3-4-5-6 | 500 |
+| Suite 1-2-3-4-5 | 500 |
+| Suite 2-3-4-5-6 | 750 |
 
 Un brelan ou une suite ne compte que s'il apparaît dans un seul et même lancer.
 
 Il n'existe ni carré, ni quinte, ni full, ni double paire. Quatre dés identiques valent le brelan, plus le quatrième dé compté seul s'il s'agit d'un 1 ou d'un 5.
 
-Réserve documentée, à ne pas corriger sans instruction : les valeurs de suites retenues divergent des barèmes français courants, qui donnent 1 500 aux deux suites. La valeur ci-dessus est la règle maison.
+Réserve levée le 2026-09-18 sur instruction. Les deux suites étaient **inversées** : la spec et `DICE_TABLE` portaient 750 pour 1-2-3-4-5 et 500 pour 2-3-4-5-6. Les valeurs ci-dessus sont les bonnes, et elles sont désormais verrouillées par `tests/bareme.test.js`.
+
+Ces valeurs divergent des barèmes français courants, qui donnent 1 500 aux deux suites : c'est la règle maison, pas une erreur. Ne pas la « corriger » sans instruction.
 
 **Ne jamais afficher dans les réglages un paramètre de barème qui ne modifie aucun comportement.**
 
@@ -458,7 +460,9 @@ Obligatoire :
 
 ### Déploiement GitHub Pages
 
-Le dépôt s'appelle **`Zilch`**, avec une majuscule. Les chemins GitHub Pages étant sensibles à la casse, l'URL réelle est de la forme `https://<utilisateur>.github.io/Zilch/`.
+Le dépôt s'appelle **`zilch-app`**, tout en minuscules. Les chemins GitHub Pages étant sensibles à la casse, l'URL réelle est `https://professeurt.github.io/zilch-app/`.
+
+Corrigé le 2026-09-18 : ce paragraphe décrivait encore l'ancien dépôt `Zilch`, avec une majuscule. C'est exactement l'erreur de casse contre laquelle il met en garde deux lignes plus bas.
 
 Le base path, le manifest, le service worker et les chemins d'assets doivent utiliser **la casse exacte du dépôt**, sous peine d'échecs silencieux à l'installation et hors ligne. Ne pas supposer un hébergement à la racine.
 

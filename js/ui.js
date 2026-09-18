@@ -235,9 +235,14 @@ function rendreVeille() {
   if (!info) return;
   if (!e.supporte) info.textContent = "Cet appareil ne sait pas le faire (iPhone : iOS 18.4 minimum, application installée sur l'écran d'accueil).";
   else if (!voulu) info.textContent = "L'écran s'éteint normalement.";
-  else if (e.actif) info.textContent = "Actif — l'écran reste allumé.";
+  // NE JAMAIS AFFIRMER QUE L'ECRAN RESTE ALLUME. Entre iOS 16.4 et 18.3, une
+  // application installee obtient un WakeLockSentinel parfaitement valide —
+  // `actif` vaut donc true — et l'ecran s'eteint quand meme (bug WebKit 254545,
+  // corrige en 18.4). La detection de fonctionnalite ne peut pas voir ce cas.
+  // On rapporte ce qu'on sait : la demande a ete acceptee. Pas davantage.
+  else if (e.actif) info.textContent = "Demande acceptée par le système. Si l'écran s'éteint malgré tout, c'est un iPhone sous iOS 18.3 ou antérieur : le verrou y est accordé puis ignoré dans une application installée. Seule la mise à jour en 18.4 le corrige.";
   else if (e.raison) info.textContent = "Refusé par le système — le mode Économie d'énergie l'interdit. Désactive-le pour que ça marche.";
-  else info.textContent = "Activé — l'écran restera allumé dès qu'une partie est ouverte.";
+  else info.textContent = "Activé — la demande sera faite dès qu'une partie est ouverte.";
 }
 
 veille.surChangement(rendreVeille);
