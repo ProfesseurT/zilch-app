@@ -64,51 +64,64 @@
 </div>
 
 <!-- PARTIE ------------------------------------------------------------- -->
+<!-- Deux zones distinctes : ce qui se LIT defile, ce qui s'ACTIONNE est fixe
+     en bas. Aucun bandeau ne peut plus repousser un bouton hors de l'ecran. -->
 <div class="ecran" id="e-partie">
-  <div id="bandeaux"></div>
+  <div class="defile">
+    <div id="bandeaux"></div>
 
-  <div class="carte actif-bloc" id="bloc-actif">
-    <div class="qui" id="p-qui">—</div>
-    <div class="total" id="p-total">0</div>
-    <div class="reste" id="p-reste"></div>
-    <div class="punitif" id="p-punitif"></div>
-  </div>
-
-  <button class="discret" id="b-annuler">Annuler le dernier tour</button>
-
-  <div id="bloc-reprise" hidden>
-    <div class="carte serree offre">
-      <p class="offre-texte" id="reprise-texte"></p>
-      <button class="or" id="b-reprendre-des">Reprendre</button>
-      <p class="legende espace" id="reprise-aide">ou saisis ton score plus bas pour repartir de zéro</p>
-      <button class="discret" id="b-zero" hidden>Repartir de zéro</button>
+    <div class="carte actif-bloc" id="bloc-actif">
+      <div class="qui" id="p-qui">—</div>
+      <div class="total" id="p-total">0</div>
+      <div class="reste" id="p-reste"></div>
+      <div class="punitif" id="p-punitif"></div>
     </div>
-  </div>
 
-  <div id="bloc-saisie">
-    <div class="carte">
+    <div id="bloc-reprise" hidden>
+      <div class="carte serree offre">
+        <p class="offre-texte" id="reprise-texte"></p>
+        <button class="or" id="b-reprendre-des">Reprendre</button>
+        <p class="legende espace" id="reprise-aide">ou marque ton propre score pour repartir de zéro</p>
+        <button class="discret" id="b-zero" hidden>Repartir de zéro</button>
+      </div>
+    </div>
+
+    <div class="carte serree">
       <div class="essais"><span id="p-essais">Essai 1/3</span><span id="p-plancher">Minimum 250</span></div>
-      <p class="legende">Dés laissés sur la table</p>
-      <div class="des" id="choix-des"></div>
-      <input id="points" class="geant espace" type="number" inputmode="numeric" pattern="[0-9]*"
-             step="50" placeholder="0" enterkeyhint="done">
-      <button class="plein geant" id="b-valider">Valider</button>
-      <div class="msg" id="m-tour"></div>
+      <div class="tableau" id="tableau"></div>
     </div>
 
+    <div class="msg" id="m-tour"></div>
+    <button class="discret" id="b-annuler">Annuler le dernier tour</button>
+    <button class="discret" id="b-abandon">Arrêter la partie</button>
+  </div>
+
+  <!-- Zone d'action : toujours sous le pouce, jamais poussee par un bandeau. -->
+  <div class="barre-action" id="bloc-saisie">
+    <button class="plein geant" id="b-marquer">Marquer un score</button>
     <div class="trio">
       <button class="discret" id="b-essai">Essai raté</button>
       <button class="terre" id="b-z">Z</button>
       <button class="terre" id="b-zplus">Z+</button>
     </div>
   </div>
+</div>
 
-  <div class="carte espace">
-    <p class="legende">Scores</p>
-    <div class="tableau" id="tableau"></div>
+<!-- FEUILLE DE SAISIE ---------------------------------------------------- -->
+<!-- Plein ecran, avec son propre pave numerique. Le clavier natif d'iOS
+     mangeait 300 px sur 664 et cachait Valider sur TOUS les modeles. -->
+<div class="feuille" id="feuille-score" hidden>
+  <div class="feuille-tete">
+    <span id="f-qui">—</span>
+    <button class="discret f-fermer" id="f-annuler">Annuler</button>
   </div>
-
-  <button class="discret" id="b-abandon">Arrêter la partie</button>
+  <div class="f-affichage"><span id="f-valeur">0</span></div>
+  <p class="legende" id="f-aide">Minimum 250 · multiples de 50</p>
+  <div class="pave" id="f-pave"></div>
+  <p class="legende">Dés laissés sur la table</p>
+  <div class="des" id="choix-des"></div>
+  <button class="plein geant" id="b-valider">Valider</button>
+  <div class="msg" id="f-msg"></div>
 </div>
 
 <!-- HISTORIQUE --------------------------------------------------------- -->

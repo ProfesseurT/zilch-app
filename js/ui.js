@@ -54,6 +54,7 @@ let partieId = null;     // partie affichee dans l'ecran de partie
 // repondue, donc on sautait l'etape : elle n'etait juste que 45 % du temps par
 // hasard, et le joueur suivant se voyait proposer une reprise fausse.
 let desChoisis = null;
+let saisie = '';            // le score en cours de frappe, dans la feuille
 let audioPret = false;
 let dernierActif = null; // pour n'animer la bascule que quand le joueur change
 
@@ -439,11 +440,42 @@ function laPartie() {
 // Valider reste inerte tant que les des restants n'ont pas ete designes.
 function majValider() {
   const b = $('b-valider');
-  b.disabled = desChoisis === null;
-  b.textContent = desChoisis === null ? 'Combien de dés restent ?'
+  const v = Number(saisie);
+  $('f-valeur').textContent = saisie === '' ? '0' : nb(v);
+  b.disabled = saisie === '' || desChoisis === null;
+  b.textContent = saisie === '' ? 'Saisis un score'
+    : desChoisis === null ? 'Combien de dés restent ?'
     : scoreAConfirmer !== null ? `${nb(scoreAConfirmer)} ? Confirmer`
     : 'Valider';
   b.classList.toggle('or', scoreAConfirmer !== null);
+}
+
+/**
+ * Pave numerique maison.
+ *
+ * Le clavier natif d'iOS mange environ 300 px sur les 664 d'un iPhone 14 :
+ * mesure faite, il cachait le bouton Valider sur TOUS les modeles, sans
+ * exception. Un pave dessine dans la page ne redimensionne rien. Les touches
+ * 00 et 50 existent parce que tout score est un multiple de 50 (§3.2).
+ */
+function rendrePave() {
+  const root = $('f-pave');
+  if (root.childElementCount) return;              // dessine une seule fois
+  const touches = ['1','2','3','4','5','6','7','8','9','50','0','00'];
+  for (const k of touches) {
+    const b = el(`<button class="${k.length > 1 ? 'appoint' : ''}">${k}</button>`);
+    b.onclick = () => {
+      if (saisie.length + k.length > 6) return;    // garde-fou de frappe
+      saisie = (saisie === '0' ? '' : saisie) + k;
+      scoreAConfirmer = null;
+      majValider();
+    };
+    root.append(b);
+  }
+  const effacer = el('<button class="appoint">Effacer</button>');
+  effacer.onclick = () => { saisie = ''; scoreAConfirmer = null; majValider(); };
+  effacer.style.gridColumn = 'span 3';
+  root.append(effacer);
 }
 
 function rendreDes() {
@@ -451,7 +483,7 @@ function rendreDes() {
   root.innerHTML = '';
   for (let n = CONFIG.minDiceLeft; n <= CONFIG.maxDiceLeft; n++) {
     const b = el(`<button aria-pressed="${n === desChoisis}">${n}</button>`);
-    b.onclick = () => { desChoisis = n; rendreDes(); majValider(); };
+    b.onclick = () => { desChoisis = n; scoreAConfirmer = null; rendreDes(); majValider(); };
     root.append(b);
   }
 }
@@ -461,6 +493,7 @@ function rendrePartie() {
   if (!g) {
     $('bandeaux').innerHTML = '<div class="bandeau info">Aucune partie en cours.</div>';
     $('bloc-saisie').hidden = true;
+    fermerFeuille();
     $('bloc-reprise').hidden = true;
     $('p-qui').textContent = '—'; $('p-total').textContent = '0'; $('p-reste').textContent = '';
     $('tableau').innerHTML = '';
@@ -512,6 +545,7 @@ function rendrePartie() {
   // donc ~47 taps par partie ne servaient qu'a dire non, et la carte de saisie
   // sautait de place entre deux tours consecutifs.
   $('bloc-saisie').hidden = fini;
+  if (fini) fermerFeuille();
 
   // Tout reactiver d'abord : le verrou d'action a pu tout desarmer, et seuls
   // les cas ci-dessous doivent rester gris.
@@ -538,7 +572,35 @@ function rendrePartie() {
 
 // Toute action de jeu passe par ici. Un seul chemin, donc un seul endroit ou
 // se tromper — et aucune regle : le moteur accepte ou refuse.
-const BOUTONS_JEU = ['b-valider', 'b-essai', 'b-z', 'b-zplus', 'b-reprendre-des', 'b-zero', 'b-annuler'];
+function ouvrirFeuille() {
+  const g = laPartie();
+  if (!g) return;
+  const etat = store.replayGame(S, g);
+  if (etat.status === 'FINISHED') return;
+  const offre = view.carryOffer(etat);
+  saisie = '';
+  desChoisis = null;
+  scoreAConfirmer = null;
+  $('f-qui').textContent = view.activePlayer(etat).name;
+  $('f-aide').textContent = etat.carryTaken
+    ? `Reprise : plus de ${nb(etat.pending.score)} · multiples de ${nb(CONFIG.scoreStep)}`
+    : offre
+      ? `Repart de zéro · minimum ${nb(CONFIG.minTurn)} · multiples de ${nb(CONFIG.scoreStep)}`
+      : `Minimum ${nb(CONFIG.minTurn)} · multiples de ${nb(CONFIG.scoreStep)}`;
+  dire('f-msg', '');
+  rendrePave();
+  rendreDes();
+  majValider();
+  $('feuille-score').hidden = false;
+}
+
+function fermerFeuille() {
+  $('feuille-score').hidden = true;
+  saisie = '';
+  scoreAConfirmer = null;
+}
+
+const BOUTONS_JEU = ['b-valider', 'b-marquer', 'b-essai', 'b-z', 'b-zplus', 'b-reprendre-des', 'b-zero', 'b-annuler'];
 let actionEnCours = false;   // verrou : un tap = une action, jamais deux
 
 function armerBoutons(actifs) {
@@ -588,7 +650,7 @@ async function executer(g, evenement) {
   try {
     S = store.record(S, partie.id, evenement);
   } catch (err) {
-    dire('m-tour', err.message, 'ko');
+    dire($('feuille-score').hidden ? 'm-tour' : 'f-msg', err.message, 'ko');
     return;
   }
   // Ecrire d'abord. Ni son, ni flash, ni message tant que ce n'est pas sur le
@@ -619,9 +681,8 @@ async function executer(g, evenement) {
   penaliteDuTour = nouvelle;          // lue par la modale de victoire
   sonner(evtSonore);
 
-  $('points').value = '';
-  scoreAConfirmer = null;
-  if (evenement.type === 'SCORE') desChoisis = null;   // choix explicite au tour suivant
+  fermerFeuille();
+  desChoisis = null;              // choix explicite au tour suivant
   rendrePartie();
 
   // Apres le rendu : l'ecran affiche deja le joueur suivant, donc le flash doit
@@ -645,11 +706,13 @@ async function executer(g, evenement) {
   } else dire('m-tour', '');
 }
 
+$('b-marquer').onclick = ouvrirFeuille;
+$('f-annuler').onclick = fermerFeuille;
+
 $('b-valider').onclick = () => {
-  if (desChoisis === null) return dire('m-tour', 'Choisis combien de dés restent sur la table.', 'ko');
-  const v = $('points').value.trim();
-  if (v === '') return dire('m-tour', 'Saisis un score.', 'ko');
-  const points = Number(v);
+  if (saisie === '') return dire('f-msg', 'Saisis un score.', 'ko');
+  if (desChoisis === null) return dire('f-msg', 'Choisis combien de dés restent sur la table.', 'ko');
+  const points = Number(saisie);
 
   // Un chiffre de trop — 4500 au lieu de 450 — passe tous les controles : il
   // est multiple de 50 et depasse le plancher. Il peut declencher le dernier
@@ -657,22 +720,11 @@ $('b-valider').onclick = () => {
   if (points > SEUIL_CONFIRMATION && scoreAConfirmer !== points) {
     scoreAConfirmer = points;
     majValider();
-    dire('m-tour', 'Score inhabituel. Touche encore pour confirmer.', 'ko');
+    dire('f-msg', 'Score inhabituel. Touche encore pour confirmer.', 'ko');
     return;
   }
-
-  // focus() DOIT etre synchrone dans le geste : apres un await, iOS refuse de
-  // rouvrir le clavier. Sans cela, il fallait retaper le champ a chaque tour,
-  // soit environ 68 taps par partie.
-  $('points').focus();
   commande({ type: 'SCORE', points, diceLeft: desChoisis });
 };
-$('points').addEventListener('input', () => {
-  if (scoreAConfirmer !== null) { scoreAConfirmer = null; majValider(); }
-});
-// Pas de blur() : le pave numerique d'iOS n'a de toute facon pas de touche
-// Retour, et fermer le clavier obligerait a retaper le champ au tour suivant.
-$('points').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('b-valider').click(); });
 $('b-essai').onclick = () => commande({ type: 'FAILED_ATTEMPT' });
 $('b-z').onclick = () => commande({ type: 'Z' });
 $('b-zplus').onclick = () => commande({ type: 'Z_PLUS' });
@@ -691,6 +743,7 @@ async function annuler() {
     $('modale').innerHTML = '';
     $('modale').dataset.pour = '';
     desChoisis = null;
+    fermerFeuille();
     dire('m-tour', 'Dernière action annulée.', 'ok');
   } finally {
     actionEnCours = false;
@@ -935,6 +988,7 @@ if ('serviceWorker' in navigator) {
 
 (async function demarrer() {
   $('bareme').innerHTML = DICE_TABLE.map(([nom, pts]) => `<tr><td>${esc(nom)}</td><td>${nb(pts)}</td></tr>`).join('');
+  rendrePave();
   rendreDes();
   majValider();
 

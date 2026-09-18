@@ -12,17 +12,25 @@
   --rayon:14px;
   --ombre:0 2px 0 var(--creme-ombre), 0 6px 18px rgba(18,58,107,.13);
   --hg:env(safe-area-inset-top); --bs:env(safe-area-inset-bottom);
+  /* Hauteur reelle de la barre de navigation fixe. Toute zone d'action
+     doit la soustraire, sinon la nav INTERCEPTE les taps par-dessus. */
+  --nav-h:64px;
 }
 
 *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent }
 
-html,body{ height:100% }
+/* min-height, PAS height : avec une hauteur figee a 100 %, le padding-bottom
+   du body n'est pas honore et le dernier bouton de chaque ecran finit sous la
+   barre de navigation, ou il n'est plus tapable. */
+html{ height:100% }
+body{ min-height:100% }
 body{
   margin:0; color:var(--encre); font-family:var(--sans); font-size:17px; line-height:1.45;
   background-color:var(--creme);
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='none' stroke='%231B4D8F' stroke-width='1.15' opacity='.42'%3E%3Cpath d='M30 30Q22 18 30 10Q38 18 30 30Z'/%3E%3Cpath d='M30 30Q22 42 30 50Q38 42 30 30Z'/%3E%3Cpath d='M30 30Q18 22 10 30Q18 38 30 30Z'/%3E%3Cpath d='M30 30Q42 22 50 30Q42 38 30 30Z'/%3E%3Ccircle cx='0' cy='0' r='9'/%3E%3Ccircle cx='60' cy='0' r='9'/%3E%3Ccircle cx='0' cy='60' r='9'/%3E%3Ccircle cx='60' cy='60' r='9'/%3E%3Cpath d='M0 30h6M54 30h6M30 0v6M30 54v6'/%3E%3C/g%3E%3Ccircle cx='30' cy='30' r='2.6' fill='%231B4D8F' opacity='.42'/%3E%3C/svg%3E");
   background-attachment:fixed;
-  padding:calc(var(--hg) + 12px) 14px calc(var(--bs) + 92px);
+  padding:calc(var(--hg) + 12px) 14px calc(var(--bs) + var(--nav-h) + 28px);
+  scroll-padding-bottom:calc(var(--bs) + var(--nav-h) + 12px);
   overscroll-behavior-y:none;
 }
 
@@ -124,7 +132,8 @@ input.geant{ font-family:var(--serif); font-size:34px; text-align:center; font-w
 nav{ position:fixed; left:0; right:0; bottom:0; z-index:50;
   display:grid; grid-template-columns:repeat(5,1fr);
   background:var(--cobalt-fonce); padding:6px 6px calc(var(--bs) + 6px);
-  border-top:2px solid var(--or) }
+  border-top:2px solid var(--or);
+  height:calc(var(--nav-h) + var(--bs)); box-sizing:border-box }
 nav button{ background:none; border:none; box-shadow:none; color:#A9C4E4; min-height:50px;
   font-size:11px; font-weight:600; letter-spacing:.06em; padding:6px 2px;
   display:flex; flex-direction:column; align-items:center; gap:3px }
@@ -337,3 +346,64 @@ button.danger{ background:var(--terre); border-color:#8C4029; color:var(--blanc)
 [data-theme="tableau"] .rangs .rang-item{ border-radius:0; background:var(--panneau);
   border-color:var(--trait) }
 [data-theme="tableau"] .rangs .rang-item.premier{ border-color:var(--signal); color:var(--signal) }
+
+/* =========================================================================
+   LOT 6 — l'ecran de partie tient sur un iPhone, quoi qu'il arrive.
+   Mesure avant : sur TOUS les modeles, Valider etait cache par le clavier, et
+   Z / Z+ / Essai passaient sous le pli des que l'offre de reprise s'affichait
+   — c'est-a-dire dans 65 % des tours. La page faisait 1046 px pour une zone
+   utile de 489 a 686 px.
+   Deux remedes structurels : ce qui s'actionne est FIXE en bas, et la saisie
+   du score a son propre pave numerique — le clavier d'iOS mangeait 300 px.
+   ========================================================================= */
+
+#e-partie.actif{ display:flex; flex-direction:column;
+  /* La nav est en position fixe : sans la soustraire ici, la barre d'action
+     passait DESSOUS et les boutons Z, Z+ et Essai rate n'etaient plus
+     tapables — elementFromPoint renvoyait une icone de la nav. */
+  height:calc(100dvh - var(--hg) - var(--bs) - var(--nav-h) - 22px) }
+#e-partie .defile{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  padding-bottom:8px }
+#e-partie .defile > :last-child{ margin-bottom:0 }
+
+.barre-action{ flex:0 0 auto; padding-top:10px; margin-bottom:0;
+  border-top:2px solid var(--cobalt); background:var(--creme) }
+.barre-action .trio{ margin-top:8px }
+.barre-action .geant{ min-height:60px }
+[data-theme="tableau"] .barre-action{ border-top-color:var(--accent); background:var(--noir) }
+
+/* Le corps ne defile plus : c'est la zone interieure qui defile. */
+body:has(#e-partie.actif){ overflow:hidden;
+  padding-bottom:calc(var(--bs) + var(--nav-h) + 8px) }
+
+/* --- Feuille de saisie ---------------------------------------------------- */
+
+.feuille{ position:fixed; inset:0; z-index:80; background:var(--creme);
+  display:flex; flex-direction:column; gap:8px;
+  padding:calc(var(--hg) + 10px) 14px calc(var(--bs) + 10px) }
+.feuille[hidden]{ display:none }
+.feuille .legende{ margin:0 }
+.feuille-tete{ display:flex; align-items:center; justify-content:space-between; gap:12px }
+.feuille-tete span{ font-family:var(--serif); font-size:22px; font-weight:700;
+  color:var(--cobalt-fonce) }
+.feuille-tete .f-fermer{ width:auto; padding:8px 16px; min-height:40px }
+
+.f-affichage{ background:var(--blanc); border:1.5px solid var(--cobalt);
+  border-radius:var(--rayon); text-align:center; padding:8px 12px;
+  font-family:var(--serif); font-size:44px; font-weight:700; line-height:1.1;
+  color:var(--encre); min-height:64px; display:grid; place-items:center }
+[data-theme="tableau"] .f-affichage{ font-family:var(--sans); letter-spacing:-.04em;
+  border:0; border-bottom:3px solid var(--accent); background:transparent;
+  font-variant-numeric:tabular-nums }
+
+.pave{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; flex:1;
+  min-height:0; max-height:300px }
+.pave button{ min-height:0; height:100%; font-family:var(--serif); font-size:26px;
+  font-weight:700; padding:0 }
+[data-theme="tableau"] .pave button{ font-family:var(--sans); font-size:24px }
+.pave button.appoint{ font-size:19px; color:var(--cobalt) }
+[data-theme="tableau"] .pave button.appoint{ color:var(--accent) }
+
+.feuille .des button{ min-height:50px }
+.feuille .geant{ min-height:58px }
+.feuille .msg{ min-height:0 }
