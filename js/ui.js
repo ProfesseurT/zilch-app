@@ -34,6 +34,26 @@ function poserTheme(id) {
 // Applique le theme memorise avant le premier rendu, pour eviter le clignotement.
 try { poserTheme(localStorage.getItem(CLE_THEME)); } catch { poserTheme('azulejo'); }
 
+// --- Taille de texte du systeme ---------------------------------------------
+//
+// Sur iOS, la taille choisie dans Reglages > Affichage n'atteint une page web
+// que par la police `-apple-system-body`. On la mesure une fois, on la borne,
+// et on la pose sur la racine : toutes les tailles de la feuille de style sont
+// en rem, donc tout suit. Bornee parce qu'au-dela l'ecran de partie ne tient
+// plus, et en dessous de 16 px iOS zoome les champs.
+function reglerEchelleTexte() {
+  try {
+    const sonde = document.createElement('span');
+    sonde.style.cssText = 'font:-apple-system-body;position:absolute;visibility:hidden';
+    document.documentElement.append(sonde);
+    const px = parseFloat(getComputedStyle(sonde).fontSize);
+    sonde.remove();
+    if (!Number.isFinite(px)) return;
+    document.documentElement.style.fontSize = Math.min(21, Math.max(16, px)) + 'px';
+  } catch { /* navigateur sans -apple-system-body : on garde 16 px */ }
+}
+reglerEchelleTexte();
+
 const $ = (id) => document.getElementById(id);
 const el = (html) => { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstElementChild; };
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -620,9 +640,12 @@ function rendrePartie() {
   $('b-annuler').disabled = g.events.length === 0 || actionEnCours;
   majValider();
 
-  $('tableau').innerHTML = etat.players.map((p) => {
+  // Le joueur actif est deja affiche en grand juste au-dessus. Le repeter ici
+  // coutait une ligne de 50 px sur un ecran ou 191 px manquaient deja, et le
+  // §6 demande « son score total » PUIS « les scores des autres joueurs ».
+  $('tableau').innerHTML = etat.players.filter((p) => fini || p.id !== actif.id).map((p) => {
     const pun = etat.punitive[p.id];
-    return `<div class="ligne ${!fini && p.id === actif.id ? 'courant' : ''}">
+    return `<div class="ligne">
       <span class="nom">${esc(p.name)}${p.id === etat.trigger ? ' ✦' : ''}
         ${pun ? `<span class="serie"> ${pun} point${pun > 1 ? 's' : ''} punitif${pun > 1 ? 's' : ''}</span>` : ''}</span>
       <span class="pts">${nb(etat.scores[p.id])}</span></div>`;

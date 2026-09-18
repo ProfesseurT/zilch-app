@@ -283,6 +283,10 @@ Grandes zones tactiles adaptées à l'iPhone.
 
 Éviter : petits boutons, menus cachés, modales inutiles, doubles confirmations, transitions lentes, saisie imposant de faire défiler l'écran.
 
+Précisé le 2026-09-18, après mesure sur un iPhone 13 mini. L'annulation et l'arrêt de la partie vivent dans la barre d'action fixe, pas dans la zone qui défile. Mesure : pendant une offre de reprise, soit 65 % des tours, la zone défilante débordait de 191 px et ce qui passait sous le pli était précisément « Annuler le dernier tour ». Le rattrapage disparaissait au tour où l'erreur est la plus probable.
+
+Le tableau des scores ne répète plus le joueur actif, affiché juste au-dessus en grand : cette section demande **son** score total, puis les scores **des autres** joueurs.
+
 ### Saisie du score et des dés restants
 
 Le score du tour est saisi directement en points, au clavier numérique. Jamais la valeur des dés.
@@ -507,6 +511,8 @@ Ce qui a sa place dans les réglages : sons activés et volume, animations rédu
 ### Accessibilité
 
 Contraste suffisant, texte lisible, boutons et cibles tactiles larges, focus clavier correct sur desktop, labels accessibles, jamais d'information portée uniquement par la couleur, respect des préférences de réduction des animations.
+
+Complété le 2026-09-18. La taille du texte suit le réglage iOS, bornée entre 16 et 21 px : voir ADR-8. Aucune cible tactile ne descend sous 44 px. L'onglet actif de la barre du bas utilise un or éclairci, l'or du logo ne tenant que 4,28:1 sur le cobalt foncé en 11 px.
 
 ---
 

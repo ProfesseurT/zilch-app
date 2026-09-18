@@ -15,6 +15,9 @@
   /* Hauteur reelle de la barre de navigation fixe. Toute zone d'action
      doit la soustraire, sinon la nav INTERCEPTE les taps par-dessus. */
   --nav-h:64px;
+  /* L'or du logo tombe a 4,28:1 sur le cobalt fonce, en 11 px. Cette
+     variante monte a 4,95:1. Elle ne sert QUE la barre du bas. */
+  --or-nav:#D6A338;
 }
 
 *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent }
@@ -25,7 +28,7 @@
 html{ height:100% }
 body{ min-height:100% }
 body{
-  margin:0; color:var(--encre); font-family:var(--sans); font-size:17px; line-height:1.45;
+  margin:0; color:var(--encre); font-family:var(--sans); font-size:1.0625rem; line-height:1.45;
   background-color:var(--creme);
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='none' stroke='%231B4D8F' stroke-width='1.15' opacity='.42'%3E%3Cpath d='M30 30Q22 18 30 10Q38 18 30 30Z'/%3E%3Cpath d='M30 30Q22 42 30 50Q38 42 30 30Z'/%3E%3Cpath d='M30 30Q18 22 10 30Q18 38 30 30Z'/%3E%3Cpath d='M30 30Q42 22 50 30Q42 38 30 30Z'/%3E%3Ccircle cx='0' cy='0' r='9'/%3E%3Ccircle cx='60' cy='0' r='9'/%3E%3Ccircle cx='0' cy='60' r='9'/%3E%3Ccircle cx='60' cy='60' r='9'/%3E%3Cpath d='M0 30h6M54 30h6M30 0v6M30 54v6'/%3E%3C/g%3E%3Ccircle cx='30' cy='30' r='2.6' fill='%231B4D8F' opacity='.42'/%3E%3C/svg%3E");
   background-attachment:fixed;
@@ -36,34 +39,34 @@ body{
 
 /* --- Titres et coque ---------------------------------------------------- */
 
-.marque{ font-family:var(--serif); font-size:26px; letter-spacing:.34em;
+.marque{ font-family:var(--serif); font-size:1.625rem; letter-spacing:.34em;
   color:var(--cobalt-fonce); text-align:center; margin:6px 0 14px; font-weight:700 }
-.marque span{ letter-spacing:0; display:block; font-size:11px; letter-spacing:.2em;
+.marque span{ letter-spacing:0; display:block; font-size:0.6875rem; letter-spacing:.2em;
   color:var(--gris); font-family:var(--sans); font-weight:400; margin-top:4px }
 
 .ecran{ display:none } .ecran.actif{ display:block }
 
 .carte{ background:var(--blanc); border:1.5px solid var(--cobalt); border-radius:var(--rayon);
-  padding:16px; margin-bottom:12px; box-shadow:var(--ombre) }
+  padding:16px; margin-bottom:10px; box-shadow:var(--ombre) }
 .carte.serree{ padding:12px }
 
-h2{ font-family:var(--serif); font-size:19px; color:var(--cobalt-fonce); margin:0 0 12px }
-.legende{ display:block; font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+h2{ font-family:var(--serif); font-size:1.1875rem; color:var(--cobalt-fonce); margin:0 0 12px }
+.legende{ display:block; font-size:0.75rem; letter-spacing:.14em; text-transform:uppercase;
   color:var(--gris); margin:0 0 8px; font-weight:600 }
 
 /* --- Boutons ------------------------------------------------------------ */
 
 button{ font:inherit; font-weight:600; border-radius:11px; border:1.5px solid var(--cobalt);
   background:var(--blanc); color:var(--cobalt-fonce); padding:15px 14px;
-  min-height:56px; width:100%; cursor:pointer; box-shadow:0 2px 0 var(--creme-ombre) }
+  min-height:3.5rem; width:100%; cursor:pointer; box-shadow:0 2px 0 var(--creme-ombre) }
 button:active{ transform:translateY(1px); box-shadow:none }
 button:disabled{ opacity:.34; box-shadow:none; cursor:default }
 button.plein{ background:var(--cobalt); color:var(--blanc); border-color:var(--cobalt-fonce) }
 button.or{ background:var(--or); border-color:#9C7420; color:#2C2005 }
 button.terre{ background:var(--terre); border-color:#8C4029; color:var(--blanc) }
 button.discret{ background:var(--blanc); border-color:var(--bord-discret); color:var(--gris);
-  min-height:44px; font-weight:500; font-size:15px }
-button.geant{ min-height:72px; font-size:20px }
+  min-height:2.75rem; font-weight:500; font-size:0.9375rem }
+button.geant{ min-height:4.5rem; font-size:1.25rem }
 
 .duo{ display:grid; grid-template-columns:1fr 1fr; gap:10px }
 .trio{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px }
@@ -72,44 +75,44 @@ button.geant{ min-height:72px; font-size:20px }
 
 /* --- Champs ------------------------------------------------------------- */
 
-input,select{ font:inherit; font-size:17px; width:100%; min-height:56px; padding:14px;
+input,select{ font:inherit; font-size:1.0625rem; width:100%; min-height:3.5rem; padding:14px;
   border:1.5px solid var(--cobalt); border-radius:11px; background:var(--blanc);
   color:var(--encre); -webkit-appearance:none }
 input::placeholder{ color:#737C8B }   /* 2,2:1 -> 4,6:1 sur le creme */
-input.geant{ font-family:var(--serif); font-size:34px; text-align:center; font-weight:700;
-  min-height:76px; letter-spacing:.04em }
+input.geant{ font-family:var(--serif); font-size:2.125rem; text-align:center; font-weight:700;
+  min-height:4.75rem; letter-spacing:.04em }
 
 /* --- Ecran de partie ---------------------------------------------------- */
 
 .actif-bloc{ background:var(--cobalt); border-color:var(--cobalt-fonce); color:var(--blanc);
   text-align:center; padding:12px 16px }
-.actif-bloc .qui{ font-family:var(--serif); font-size:26px; font-weight:700; line-height:1.1 }
-.actif-bloc .total{ font-size:38px; font-family:var(--serif); font-weight:700;
+.actif-bloc .qui{ font-family:var(--serif); font-size:1.625rem; font-weight:700; line-height:1.1 }
+.actif-bloc .total{ font-size:2.375rem; font-family:var(--serif); font-weight:700;
   color:var(--or); line-height:1.05 }
-.actif-bloc .reste{ font-size:12px; opacity:.86 }
+.actif-bloc .reste{ font-size:0.75rem; opacity:.86 }
 .actif-bloc.change{ animation:bascule .16s ease-out }
 @keyframes bascule{ from{ opacity:.25; transform:scale(.985) } to{ opacity:1; transform:none } }
 
 .tableau{ display:flex; flex-direction:column; gap:2px }
 .ligne{ display:flex; align-items:baseline; justify-content:space-between; gap:10px;
-  padding:9px 10px; border-radius:9px }
+  padding:7px 10px; border-radius:9px }
 .ligne.courant{ background:#EAF1FA; box-shadow:inset 0 0 0 1.5px var(--cobalt-clair) }
 .ligne .nom{ font-weight:600 }
-.ligne .pts{ font-family:var(--serif); font-size:21px; font-weight:700; color:var(--cobalt-fonce) }
-.ligne .serie{ font-size:11px; color:var(--terre); letter-spacing:.08em; font-weight:700 }
+.ligne .pts{ font-family:var(--serif); font-size:1.3125rem; font-weight:700; color:var(--cobalt-fonce) }
+.ligne .serie{ font-size:0.6875rem; color:var(--terre); letter-spacing:.08em; font-weight:700 }
 
 .bandeau{ border-radius:11px; padding:12px 14px; margin-bottom:12px;
-  font-size:14px; border:1.5px solid }
+  font-size:0.875rem; border:1.5px solid }
 .bandeau.info{ background:#EAF1FA; border-color:var(--cobalt-clair); color:var(--cobalt-fonce) }
 .bandeau.alerte{ background:#FBEDE8; border-color:var(--terre); color:#7E3928 }
 .bandeau.final{ background:#FBF3DE; border-color:var(--or); color:#6B4E10 }
 .bandeau b{ font-weight:700 }
 
 .essais{ display:flex; justify-content:space-between; align-items:center;
-  font-size:13px; color:var(--gris); margin-bottom:8px; font-weight:600;
+  font-size:0.8125rem; color:var(--gris); margin-bottom:8px; font-weight:600;
   letter-spacing:.1em; text-transform:uppercase }
 .des{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px }
-.des button{ min-height:56px; font-family:var(--serif); font-size:22px; padding:0 }
+.des button{ min-height:3.5rem; font-family:var(--serif); font-size:1.375rem; padding:0 }
 .des button[aria-pressed="true"]{ background:var(--cobalt); color:var(--blanc) }
 
 /* --- Flash Z / Z+ / penalite. Non bloquant : rien n'attend sa fin. ------- */
@@ -138,23 +141,23 @@ nav button{ background:none; border:none; box-shadow:none; color:#A9C4E4; min-he
   font-size:11px; font-weight:600; letter-spacing:.06em; padding:6px 2px;
   display:flex; flex-direction:column; align-items:center; gap:3px }
 nav button .ic{ font-size:17px; line-height:1 }
-nav button[aria-current="page"]{ color:var(--or) }
+nav button[aria-current="page"]{ color:var(--or-nav) }
 
 /* --- Divers ------------------------------------------------------------- */
 
-.vide{ text-align:center; color:var(--gris); padding:22px 10px; font-size:15px }
+.vide{ text-align:center; color:var(--gris); padding:22px 10px; font-size:0.9375rem }
 .puce{ display:flex; align-items:center; gap:12px; padding:13px 12px;
   border:1.5px solid var(--creme-ombre); border-radius:11px; margin-bottom:8px; background:var(--blanc) }
 .puce.choisi{ border-color:var(--cobalt); background:#EAF1FA }
 .puce .nom{ flex:1; font-weight:600 }
-.puce .meta{ font-size:12px; color:var(--gris); font-weight:400 }
+.puce .meta{ font-size:0.75rem; color:var(--gris); font-weight:400 }
 .puce .rang{ font-family:var(--serif); font-weight:700; color:var(--or); min-width:24px }
 .kpi{ display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--creme-ombre) }
 .kpi:last-child{ border:0 }
-.kpi b{ font-family:var(--serif); font-size:18px; color:var(--cobalt-fonce) }
-.msg{ font-size:14px; min-height:1.3em; margin-top:9px; font-weight:600 }
+.kpi b{ font-family:var(--serif); font-size:1.125rem; color:var(--cobalt-fonce) }
+.msg{ font-size:0.875rem; min-height:1.3em; margin-top:9px; font-weight:600 }
 .msg.ko{ color:var(--terre) } .msg.ok{ color:var(--vert) }
-table.bareme{ width:100%; border-collapse:collapse; font-size:15px }
+table.bareme{ width:100%; border-collapse:collapse; font-size:0.9375rem }
 table.bareme td{ padding:8px 0; border-bottom:1px solid var(--creme-ombre) }
 table.bareme td:last-child{ text-align:right; font-family:var(--serif); font-weight:700; color:var(--cobalt-fonce) }
 
@@ -162,7 +165,7 @@ table.bareme td:last-child{ text-align:right; font-family:var(--serif); font-wei
   display:grid; place-items:center; padding:22px }
 .modale .boite{ background:var(--blanc); border:2px solid var(--or); border-radius:18px;
   padding:26px 20px; text-align:center; max-width:400px; width:100% }
-.modale .vainqueur{ font-family:var(--serif); font-size:34px; font-weight:700;
+.modale .vainqueur{ font-family:var(--serif); font-size:2.125rem; font-weight:700;
   color:var(--cobalt-fonce); margin:6px 0 }
 
 @media (prefers-reduced-motion:reduce){
@@ -193,12 +196,12 @@ table.bareme td:last-child{ text-align:right; font-family:var(--serif); font-wei
 }
 
 [data-theme="tableau"] .marque{
-  font-family:var(--sans); font-weight:800; font-size:40px; letter-spacing:-.045em;
+  font-family:var(--sans); font-weight:800; font-size:2.5rem; letter-spacing:-.045em;
   color:var(--texte); text-align:left; text-transform:uppercase; margin:2px 0 16px;
   border-bottom:3px solid var(--accent); padding-bottom:10px;
 }
 [data-theme="tableau"] .marque span{
-  text-align:left; letter-spacing:.28em; font-size:10px; color:var(--faible); margin-top:8px;
+  text-align:left; letter-spacing:.28em; font-size:0.625rem; color:var(--faible); margin-top:8px;
 }
 
 [data-theme="tableau"] .carte{
@@ -212,22 +215,22 @@ table.bareme td:last-child{ text-align:right; font-family:var(--serif); font-wei
 [data-theme="tableau"] button{
   border-radius:0; box-shadow:none; border:1px solid var(--trait);
   background:var(--panneau); color:var(--texte);
-  text-transform:uppercase; letter-spacing:.1em; font-size:14px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.1em; font-size:0.875rem; font-weight:700;
 }
 [data-theme="tableau"] button:active{ transform:none; background:var(--trait) }
 [data-theme="tableau"] button.plein{ background:var(--accent); color:#0A0400; border-color:var(--accent); font-weight:800 }
 [data-theme="tableau"] button.or{ background:var(--signal); color:#191100; border-color:var(--signal); font-weight:800 }
 [data-theme="tableau"] button.terre{ background:transparent; color:var(--accent); border:2px solid var(--accent) }
 [data-theme="tableau"] button.discret{ background:transparent; color:var(--faible); border-color:var(--trait) }
-[data-theme="tableau"] button.geant{ font-size:20px; letter-spacing:.10em }
+[data-theme="tableau"] button.geant{ font-size:1.25rem; letter-spacing:.10em }
 
 [data-theme="tableau"] input,[data-theme="tableau"] select{
   border-radius:0; background:var(--noir); border:1px solid var(--trait); color:var(--texte);
 }
 [data-theme="tableau"] input.geant{
-  font-family:var(--sans); font-weight:800; font-size:52px; letter-spacing:-.05em;
+  font-family:var(--sans); font-weight:800; font-size:3.25rem; letter-spacing:-.05em;
   font-variant-numeric:tabular-nums; border:0; border-bottom:3px solid var(--accent);
-  background:transparent; min-height:88px;
+  background:transparent; min-height:5.5rem;
 }
 [data-theme="tableau"] input::placeholder{ color:#3A4046 }
 
@@ -237,15 +240,15 @@ table.bareme td:last-child{ text-align:right; font-family:var(--serif); font-wei
   background:var(--accent); border:0; color:#0A0400; text-align:left; padding:16px 14px;
 }
 [data-theme="tableau"] .actif-bloc .qui{
-  font-family:var(--sans); font-weight:800; font-size:34px; letter-spacing:-.04em;
+  font-family:var(--sans); font-weight:800; font-size:2.125rem; letter-spacing:-.04em;
   text-transform:uppercase;
 }
 [data-theme="tableau"] .actif-bloc .total{
-  font-family:var(--sans); font-weight:800; font-size:68px; line-height:.92;
+  font-family:var(--sans); font-weight:800; font-size:4.25rem; line-height:.92;
   color:#0A0400; letter-spacing:-.055em; font-variant-numeric:tabular-nums;
 }
 [data-theme="tableau"] .actif-bloc .reste{
-  font-size:11px; text-transform:uppercase; letter-spacing:.18em; opacity:.72; margin-top:6px;
+  font-size:0.6875rem; text-transform:uppercase; letter-spacing:.18em; opacity:.72; margin-top:6px;
 }
 [data-theme="tableau"] .actif-bloc.change{ animation:plaque .16s steps(2,end) }
 @keyframes plaque{ from{ background:var(--signal) } to{ background:var(--accent) } }
@@ -254,7 +257,7 @@ table.bareme td:last-child{ text-align:right; font-family:var(--serif); font-wei
 [data-theme="tableau"] .ligne.courant{ background:transparent; box-shadow:none; border-left:3px solid var(--accent); padding-left:9px }
 [data-theme="tableau"] .ligne .nom{ text-transform:uppercase; letter-spacing:.06em; font-weight:700 }
 [data-theme="tableau"] .ligne .pts{
-  font-family:var(--sans); font-weight:800; font-size:30px; color:var(--texte);
+  font-family:var(--sans); font-weight:800; font-size:1.875rem; color:var(--texte);
   letter-spacing:-.045em; font-variant-numeric:tabular-nums;
 }
 [data-theme="tableau"] .ligne .serie{ color:var(--accent) }
@@ -264,7 +267,7 @@ table.bareme td:last-child{ text-align:right; font-family:var(--serif); font-wei
 [data-theme="tableau"] .bandeau.alerte{ background:var(--panneau); border-color:var(--accent); color:var(--texte) }
 [data-theme="tableau"] .bandeau.final{ background:var(--signal); border-color:var(--signal); color:#191100 }
 
-[data-theme="tableau"] .des button{ font-family:var(--sans); font-weight:800; font-size:24px }
+[data-theme="tableau"] .des button{ font-family:var(--sans); font-weight:800; font-size:1.5rem }
 [data-theme="tableau"] .des button[aria-pressed="true"]{ background:var(--accent); color:#0A0400; border-color:var(--accent) }
 
 [data-theme="tableau"] #flash .mot{
@@ -284,33 +287,33 @@ table.bareme td:last-child{ text-align:right; font-family:var(--serif); font-wei
 [data-theme="tableau"] .modale{ background:rgba(8,9,10,.86) }
 [data-theme="tableau"] .modale .boite{ border-radius:0; border:0; border-top:4px solid var(--accent); background:var(--panneau) }
 [data-theme="tableau"] .modale .vainqueur{
-  font-family:var(--sans); font-weight:800; font-size:42px; letter-spacing:-.045em;
+  font-family:var(--sans); font-weight:800; font-size:2.625rem; letter-spacing:-.045em;
   text-transform:uppercase; color:var(--texte);
 }
 
 /* --- Selecteur de theme ------------------------------------------------- */
 
 .themes{ display:grid; grid-template-columns:1fr 1fr; gap:10px }
-.themes button{ min-height:64px; display:flex; flex-direction:column; gap:5px;
-  align-items:center; justify-content:center; font-size:13px }
+.themes button{ min-height:4rem; display:flex; flex-direction:column; gap:5px;
+  align-items:center; justify-content:center; font-size:0.8125rem }
 .themes button .apercu{ display:block; width:46px; height:12px; border-radius:2px }
 .themes button[aria-pressed="true"]{ outline:3px solid var(--or); outline-offset:-3px }
 
 /* --- Lot 3 : ce qui decide, se lit ---------------------------------------- */
 
 .offre{ border-color:var(--or); border-width:2px; padding:11px 12px }
-.offre-texte{ font-size:18px; line-height:1.3; margin:0 0 9px; font-weight:500 }
-#reprise-aide{ margin:7px 0 0; font-size:11px }
+.offre-texte{ font-size:1.125rem; line-height:1.3; margin:0 0 9px; font-weight:500 }
+#reprise-aide{ margin:7px 0 0; font-size:0.6875rem }
 .offre-texte b{ font-weight:700; color:var(--cobalt-fonce) }
 [data-theme="tableau"] .offre{ border-left-color:var(--signal) }
 [data-theme="tableau"] .offre-texte b{ color:var(--signal) }
 
-.essais{ font-size:15px; color:var(--gris) }
+.essais{ font-size:0.9375rem; color:var(--gris) }
 
 /* Compteur punitif dans le bloc du joueur actif : c'est le seul chiffre qui
    annonce le -1000, il etait en 11 px au fond du tableau des scores. */
 .punitif{ display:flex; align-items:center; justify-content:center; gap:6px;
-  margin-top:5px; font-size:12px; letter-spacing:.05em }
+  margin-top:5px; font-size:0.75rem; letter-spacing:.05em }
 .punitif:empty{ display:none }
 .punitif .pastille{ width:15px; height:15px; border-radius:50%;
   border:2px solid currentColor; display:inline-block }
@@ -332,7 +335,7 @@ button.danger{ background:var(--terre); border-color:#8C4029; color:var(--blanc)
 
 .bloc-stat{ margin:14px 0 0 }
 .bloc-stat > .legende{ margin-bottom:6px }
-.kpi.fort b{ font-size:21px }
+.kpi.fort b{ font-size:1.3125rem }
 .kpi.positif b{ color:var(--vert) }
 .kpi.negatif b{ color:var(--terre) }
 .jauge{ height:7px; border-radius:4px; background:var(--creme-ombre); overflow:hidden; margin-top:5px }
@@ -340,7 +343,7 @@ button.danger{ background:var(--terre); border-color:#8C4029; color:var(--blanc)
 [data-theme="tableau"] .jauge{ background:var(--trait); border-radius:0 }
 [data-theme="tableau"] .jauge span{ background:var(--accent) }
 .rangs{ display:flex; flex-wrap:wrap; gap:6px }
-.rangs .rang-item{ font-size:13px; padding:5px 9px; border:1px solid var(--creme-ombre);
+.rangs .rang-item{ font-size:0.8125rem; padding:5px 9px; border:1px solid var(--creme-ombre);
   border-radius:20px; background:var(--blanc) }
 .rangs .rang-item.premier{ border-color:var(--or); font-weight:700 }
 [data-theme="tableau"] .rangs .rang-item{ border-radius:0; background:var(--panneau);
@@ -369,7 +372,12 @@ button.danger{ background:var(--terre); border-color:#8C4029; color:var(--blanc)
 .barre-action{ flex:0 0 auto; padding-top:10px; margin-bottom:0;
   border-top:2px solid var(--cobalt); background:var(--creme) }
 .barre-action .trio{ margin-top:8px }
-.barre-action .geant{ min-height:60px }
+/* Annuler et Arreter vivaient au fond de la zone qui defile. Pendant une
+   offre de reprise, soit 65 % des tours, ils passaient sous le pli : le
+   rattrapage disparaissait au tour ou l'erreur est la plus probable. */
+.barre-action .duo{ margin-top:8px }
+.barre-action .duo button{ min-height:2.75rem }
+.barre-action .geant{ min-height:3.75rem }
 [data-theme="tableau"] .barre-action{ border-top-color:var(--accent); background:var(--noir) }
 
 /* Le corps ne defile plus : c'est la zone interieure qui defile. */
@@ -384,26 +392,32 @@ body:has(#e-partie.actif){ overflow:hidden;
 .feuille[hidden]{ display:none }
 .feuille .legende{ margin:0 }
 .feuille-tete{ display:flex; align-items:center; justify-content:space-between; gap:12px }
-.feuille-tete span{ font-family:var(--serif); font-size:22px; font-weight:700;
+.feuille-tete span{ font-family:var(--serif); font-size:1.375rem; font-weight:700;
   color:var(--cobalt-fonce) }
-.feuille-tete .f-fermer{ width:auto; padding:8px 16px; min-height:40px }
+.feuille-tete .f-fermer{ width:auto; padding:8px 16px; min-height:2.75rem }
 
 .f-affichage{ background:var(--blanc); border:1.5px solid var(--cobalt);
   border-radius:var(--rayon); text-align:center; padding:8px 12px;
-  font-family:var(--serif); font-size:44px; font-weight:700; line-height:1.1;
-  color:var(--encre); min-height:64px; display:grid; place-items:center }
+  font-family:var(--serif); font-size:2.75rem; font-weight:700; line-height:1.1;
+  color:var(--encre); min-height:4rem; display:grid; place-items:center }
 [data-theme="tableau"] .f-affichage{ font-family:var(--sans); letter-spacing:-.04em;
   border:0; border-bottom:3px solid var(--accent); background:transparent;
   font-variant-numeric:tabular-nums }
 
+/* Le pave prend la hauteur libre au lieu d'etre bride a 300 px : sur un
+   13 mini, 135 px restaient vides sous Valider et les touches faisaient
+   56 px. Le plafond evite qu'elles deviennent absurdes sur un grand ecran. */
 .pave{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; flex:1;
-  min-height:0; max-height:300px }
-.pave button{ min-height:0; height:100%; font-family:var(--serif); font-size:26px;
+  min-height:0; max-height:23rem }
+.pave button{ min-height:0; height:100%; font-family:var(--serif); font-size:1.625rem;
   font-weight:700; padding:0 }
-[data-theme="tableau"] .pave button{ font-family:var(--sans); font-size:24px }
-.pave button.appoint{ font-size:19px; color:var(--cobalt) }
+[data-theme="tableau"] .pave button{ font-family:var(--sans); font-size:1.5rem }
+.pave button.appoint{ font-size:1.1875rem; color:var(--cobalt) }
 [data-theme="tableau"] .pave button.appoint{ color:var(--accent) }
 
-.feuille .des button{ min-height:50px }
-.feuille .geant{ min-height:58px }
+.feuille .des button{ min-height:3.125rem }
+.feuille .geant{ min-height:4rem }
 .feuille .msg{ min-height:0 }
+/* Ce qui valide se colle au bas de l'ecran, sous le pouce. Tout l'espace
+   libre est repousse ici, il n'y a plus de creux sous le bouton. */
+.feuille .bas{ margin-top:auto }

@@ -4,7 +4,7 @@
 
 import { createGame, apply, CONFIG } from '../js/engine.js';
 
-const BAREME = { straight15: 750, straight26: 500 };
+const BAREME = { straight15: 500, straight26: 750 };   // §3.11, valeurs corrigees le 2026-09-18
 const MAX_LANCERS = 200; // garde-fou : une suite de mains pleines est theoriquement infinie
 
 function lancer(n) {

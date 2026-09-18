@@ -1,6 +1,6 @@
 # ZILCH — Décisions d'architecture
 
-Sept décisions structurantes prises pendant la spécification. Chacune est réversible à un coût précis, indiqué en fin de fiche. Ce document sert à ne pas les re-litiger sans raison, et à savoir quoi rouvrir si le contexte change.
+Huit décisions structurantes, les sept premières prises pendant la spécification. Chacune est réversible à un coût précis, indiqué en fin de fiche. Ce document sert à ne pas les re-litiger sans raison, et à savoir quoi rouvrir si le contexte change.
 
 **Déciders :** Ted (produit et arbitrage), Claude (proposition et mesure)
 
@@ -300,6 +300,63 @@ La victoire, entendue une seule fois par partie, gagne à rester unique : plusie
 - Les sons actuels, issus de Myinstants, doivent être remplacés : le site ne revendique pas la propriété de son contenu et interdit la redistribution commerciale.
 
 **Coût de réouverture :** nul. Ajouter un son se fait en deux gestes.
+
+---
+
+# ADR-8 : La taille du texte suit le réglage iOS, entre deux bornes
+
+**Statut :** Accepté · **Date :** 2026-09-18
+
+## Contexte
+
+Toutes les tailles de la feuille de style étaient en pixels fixes. Un joueur qui augmente la taille du texte dans Réglages > Affichage ne voyait aucune différence dans ZILCH. Le §12 demande un texte lisible ; il ne disait rien du réglage système.
+
+Sur iOS, ce réglage n'atteint une page web que par une seule porte : la police `-apple-system-body`. Aucune autre technique ne le lit.
+
+## Décision
+
+Au démarrage, l'application mesure `-apple-system-body` sur un élément témoin, **borne le résultat entre 16 et 21 px**, et pose cette valeur sur la racine du document. Toutes les tailles de texte et toutes les hauteurs de bouton sont exprimées en `rem`, donc tout suit.
+
+**La barre de navigation du bas est exclue** et garde des tailles en pixels.
+
+## Options considérées
+
+### Option A — Ne rien faire
+
+**Pour :** aucun risque de régression sur un écran déjà contraint.
+**Contre :** un joueur qui a besoin d'un texte plus gros ne peut pas jouer. C'est le seul cas où l'application est inutilisable plutôt qu'imparfaite.
+
+### Option B — Suivre le réglage sans borne
+
+**Pour :** respect intégral du choix de l'utilisateur.
+**Contre :** mesuré sur un iPhone 13 mini, à partir de 21 px la zone d'action de l'écran de partie déborde et les boutons Z et Z+ repassent sous le pli. Le remède recrée le défaut corrigé au lot 6.
+
+### Option C — Suivre le réglage, borné à 16-21 px *(retenue)*
+
+| Taille de base | Écran de partie, 4 joueurs, hors offre | Accueil installé |
+|---|---|---|
+| 16 px | tient | tient |
+| 19 px | tient | tient |
+| 21 px | 33 px sous le pli | 29 px sous le pli |
+
+**Pour :** couvre l'écart qui compte sans casser l'écran le plus critique.
+**Contre :** un utilisateur réglé au-delà de 21 px n'obtient pas tout ce qu'il a demandé.
+
+## Analyse
+
+La borne basse à 16 px n'est pas cosmétique : en dessous, Safari iOS zoome automatiquement sur les champs de saisie, ce qui déplace toute la page.
+
+La borne haute est un arbitrage assumé entre deux besoins d'accessibilité qui se contredisent sur un petit écran : un texte plus gros, et des boutons qui restent atteignables. Le §0 tranche dans cet ordre : fiabilité des règles, rapidité d'usage, conservation des données, ergonomie mobile. Un bouton Z hors d'atteinte coûte plus qu'un texte à 21 px plutôt qu'à 24.
+
+La barre du bas est exclue parce que sa hauteur est verrouillée par `--nav-h`, que l'écran de partie soustrait de sa propre hauteur. La laisser grandir rouvrirait exactement le défaut du lot 6 : la zone d'action passant sous la barre, et ses boutons interceptés.
+
+## Conséquences
+
+- Toute nouvelle taille de texte s'écrit en `rem`, jamais en pixels. Un test le vérifie sur l'ensemble de la feuille de style, barre du bas exclue.
+- Le contrôle ne peut pas se faire dans un navigateur de bureau : `-apple-system-body` n'existe que sur WebKit. La mesure se simule en forçant la taille de la racine.
+- Les bornes sont deux nombres dans `reglerEchelleTexte`, dans `js/ui.js`.
+
+**Coût de réouverture :** faible. Déplacer une borne est un nombre. Sortir la barre du bas de son exception demande de revoir `--nav-h`.
 
 ---
 
