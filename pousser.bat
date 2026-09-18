@@ -79,7 +79,7 @@ rem ---------------------------------------------------------------
 "!GIT!" add -A
 if errorlevel 1 ( echo [ECHEC] git add. & pause & exit /b 1 )
 
-"!GIT!" commit -m "Lot 6 : l'ecran de partie tient reellement sur un iPhone" -m "Barre d'action fixe, pave numerique maison, --nav-h soustraite de la hauteur. Mesure sur vrais viewports iPhone : Z, Z+ et Essai rate etaient interceptes par la barre de navigation, Valider etait cache par le clavier sur tous les modeles. 140 tests au vert. Service worker en zilch-v8."
+"!GIT!" commit -m "Lot 6 + ecran maintenu allume pendant une partie" -m "1) Format iPhone : barre d'action fixe, pave numerique maison, --nav-h soustraite de la hauteur. Mesure sur vrais viewports : Z, Z+ et Essai rate etaient interceptes par la barre de navigation, Valider etait cache par le clavier sur tous les modeles. 2) Screen Wake Lock (iOS 18.4+) : l'ecran reste allume pendant une partie affichee seulement, le verrou est repris au retour au premier plan, et un refus du systeme (mode Economie d'energie) est affiche au lieu d'etre avale. 149 tests au vert. Service worker en zilch-v9."
 if errorlevel 1 (
   echo.
   echo [ECHEC] Le commit a echoue.
@@ -110,7 +110,7 @@ echo ==========================================================
 echo    ENVOYE.
 echo.
 echo    L'application se met a jour toute seule sur ton iPhone
-echo    dans la minute qui suit - le cache passe en zilch-v8.
+echo    dans la minute qui suit - le cache passe en zilch-v9.
 echo.
 echo    https://professeurt.github.io/zilch-app/
 echo ==========================================================

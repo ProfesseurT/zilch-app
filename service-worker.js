@@ -5,7 +5,7 @@
 // versionne automatiquement. Sans ce numero, le cache sert indefiniment
 // l'ancienne version : un correctif pousse sur GitHub Pages n'atteint jamais
 // l'iPhone, et rien ne le signale.
-const VERSION = 'zilch-v8';
+const VERSION = 'zilch-v9';
 
 // Tout ce qui doit fonctionner hors ligne. Un fichier ajoute au projet et
 // oublie ici ne sera pas disponible en mode avion — et l'oubli est silencieux.
@@ -20,6 +20,7 @@ const A_PRECACHER = [
   './js/store.js',
   './js/idb.js',
   './js/sounds.js',
+  './js/veille.js',
   './icon-180.png',
   './icon-192.png',
   './icon-512.png',

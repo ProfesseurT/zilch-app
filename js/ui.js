@@ -9,6 +9,7 @@ import * as store from './store.js';
 import * as idb from './idb.js';
 import { view, CONFIG, DICE_TABLE } from './engine.js';
 import { createPicker, preload, unlock, play, choisirSon } from './sounds.js';
+import * as veille from './veille.js';
 
 // --- Theme ------------------------------------------------------------------
 // Le choix vit dans le store (donc exporte et reimporte), mais il est aussi
@@ -72,6 +73,7 @@ function aller(nom) {
   if (nom === 'historique') rendreHistorique();
   if (nom === 'stats') rendreStats();
   if (nom === 'accueil') rendreAccueil();
+  majVeille();   // quitter la partie rend la main au systeme
   window.scrollTo({ top: 0 });
 }
 document.addEventListener('click', (e) => {
@@ -187,6 +189,59 @@ function rendreThemes() {
   }
 }
 
+// --- Ecran allume -----------------------------------------------------------
+// Un ecran qui s'eteint au milieu d'un tour oblige a deverrouiller le telephone
+// entre deux joueurs. Le verrou n'est demande QUE pendant une partie affichee :
+// le tenir sur l'accueil viderait la batterie sans rien rendre en echange.
+//
+// L'etat affiche est celui du SYSTEME, pas celui du souhait : si iOS refuse
+// (mode Economie d'energie), l'application le dit au lieu de mentir.
+
+function partieAffichee() {
+  return !!$('e-partie')?.classList.contains('actif') && !!partieEnCours();
+}
+
+async function majVeille() {
+  if (S.settings?.keepAwake && partieAffichee()) await veille.garderAllume();
+  else await veille.laisserEteindre();
+  rendreVeille();
+}
+
+function rendreVeille() {
+  const b = $('b-veille');
+  if (!b) return;
+  const e = veille.etat();
+  const voulu = !!S.settings?.keepAwake;
+  b.setAttribute('aria-pressed', String(voulu));
+  b.disabled = !e.supporte;
+  b.textContent = voulu ? 'Écran maintenu allumé' : "Garder l'écran allumé";
+  b.onclick = async () => {
+    const etatDisque = S;
+    S = { ...S, settings: { ...S.settings, keepAwake: !voulu } };
+    await sauver(etatDisque);
+    await majVeille();
+  };
+  // Le refus doit aussi se voir LA OU il se produit : sur l'ecran de partie.
+  // Sinon le seul endroit qui en parle est l'accueil, ou personne ne va pendant
+  // une partie, et l'ecran s'eteint sans explication.
+  const avis = $('veille-avis');
+  if (avis) {
+    avis.innerHTML = (voulu && e.supporte && !e.actif && e.raison && partieAffichee())
+      ? `<div class="bandeau info">L'écran n'est <b>pas</b> maintenu allumé — le mode Économie d'énergie le refuse.</div>`
+      : '';
+  }
+
+  const info = $('veille-etat');
+  if (!info) return;
+  if (!e.supporte) info.textContent = "Cet appareil ne sait pas le faire (iPhone : iOS 18.4 minimum, application installée sur l'écran d'accueil).";
+  else if (!voulu) info.textContent = "L'écran s'éteint normalement.";
+  else if (e.actif) info.textContent = "Actif — l'écran reste allumé.";
+  else if (e.raison) info.textContent = "Refusé par le système — le mode Économie d'énergie l'interdit. Désactive-le pour que ça marche.";
+  else info.textContent = "Activé — l'écran restera allumé dès qu'une partie est ouverte.";
+}
+
+veille.surChangement(rendreVeille);
+
 // §8.2 : l'export est le seul filet reel. Une sauvegarde qu'il faut penser a
 // declencher n'est jamais faite — donc on rappelle son age, a l'endroit ou on
 // passe forcement.
@@ -216,6 +271,7 @@ function rendreRappelExport() {
 
 function rendreAccueil() {
   rendreThemes();
+  rendreVeille();
   // Rejoue a chaque passage : le bouton « Exporter avant d'installer » n'a de
   // sens qu'a partir du moment ou il y a quelque chose a exporter.
   rendreBandeauInstallation(idb.isInstalled());
@@ -566,6 +622,9 @@ function rendrePartie() {
         ${pun ? `<span class="serie"> ${pun} point${pun > 1 ? 's' : ''} punitif${pun > 1 ? 's' : ''}</span>` : ''}</span>
       <span class="pts">${nb(etat.scores[p.id])}</span></div>`;
   }).join('');
+
+  // La partie finie, le systeme reprend la main : plus rien a garder allume.
+  majVeille();
 
   if (fini) montrerVainqueur(g, etat);
 }
