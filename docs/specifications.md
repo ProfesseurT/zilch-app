@@ -774,4 +774,4 @@ Douze points diffèrent des intentions initiales. Vérifier que chacun correspon
 | Installation | Recommandée dans le README | **Obligatoire**, imposée par l'application |
 | Sons | Fichiers Myinstants | Enregistrements maison, éléments `<audio>` |
 | Stack | Non définie | JavaScript natif, sans build, cache versionné à la main |
-| Chemin de déploiement | `/zilch/` | `/Zilch/`, casse du dépôt |
+| Chemin de déploiement | `/zilch/` | `/zilch-app/`, casse du dépôt |

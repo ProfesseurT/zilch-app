@@ -14,7 +14,25 @@
 
 ---
 
-## Lot 9 — 2026-09-19 · à pousser
+## Lot 10 — 2026-09-19 · à pousser
+
+**L'application maigrit de ce qu'elle ne joue pas.**
+
+Poids mesurés sur le dépôt après coup, taille réelle des fichiers.
+
+- Les métadonnées de tous les mp3 sont retirées. Le flux audio n'est pas touché, pas un octet réencodé. `sons/zplus-02.mp3` portait à lui seul une pochette d'album de 447 ko pour 5,4 secondes de son, soit 21 % de tout le précache.
+- `Claude outputs/` était versionné et servi publiquement, référencé nulle part : retiré.
+- L'annexe de la spécification et l'ADR-7 citaient encore l'ancien dépôt avec une majuscule, l'erreur de casse exacte contre laquelle ils mettent en garde. Point ouvert depuis le lot 7, fermé.
+
+Après ce lot : sons du thème par défaut 1640 ko, thème Matrix 188 ko, dépôt entier 2286 ko.
+
+**Écarté volontairement.** Le réencodage en mono 96 kbps, qui ferait tomber les sons du thème par défaut à 893 ko. Il coûte une génération de compression et se juge à l'oreille, pas à la mesure.
+
+**Reste ouvert.** Les treize sons du thème par défaut portent une signature de conversion depuis un conteneur vidéo, et l'un d'eux portait encore l'adresse de sa vidéo source. Ce ne sont probablement pas des enregistrements maison, ce que le §14 exige. L'application est publique. Rien n'a été touché : le point est signalé, pas corrigé.
+
+---
+
+## Lot 9 — 2026-09-19 · `f863c95`
 
 **Un troisième thème, qui change aussi ce qu'on entend et ce qu'on voit derrière.**
 

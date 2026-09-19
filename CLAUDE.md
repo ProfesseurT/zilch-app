@@ -39,6 +39,7 @@ Ne jamais modifier silencieusement une règle pour simplifier le code. Si une co
 - **Reformuler avant d'agir.** Dire ce qu'on a compris, puis faire.
 - **Mesurer avant d'affirmer.** Tout chiffre avancé dit d'où il vient et comment il a été obtenu. Une intuition de performance ou d'ergonomie ne vaut rien sans protocole.
 - **Signaler, ne pas corriger en douce.** Une incohérence trouvée en chemin se signale. On la corrige seulement si c'est notre propre changement qui l'a rendue fausse.
+- **Tout ce qu'il y a à faire est livré en script à coller dans le terminal.** Un seul bloc, commenté, exécutable tel quel. Aucune étape décrite en prose à refaire à la main.
 - **Ted pousse lui-même.** On lui donne la commande, on ne pousse jamais à sa place.
 - **Confirmation avant tout geste irréversible.**
 - **Pas de jargon de développeur.** Ted est néophyte en informatique et comprend vite : expliquer l'effet, pas la mécanique interne.
@@ -121,6 +122,5 @@ Le lot 9 a mesuré les trois thèmes le même jour, dans les mêmes conditions, 
 ## 8. Reste ouvert
 
 - Les règles du §3 attendent toujours d'être validées par une partie réelle à une table.
-- L'annexe de `docs/specifications.md` cite encore l'ancien dépôt `/Zilch/`, corrigé au §11 mais pas dans l'annexe.
 - À 4 joueurs pendant une offre de reprise, la fin du tableau des scores passe sous le pli, 76 px. De l'information de référence, jamais une action. À 2 et 3 joueurs tout tient.
 - Les sons du dépôt doivent être des enregistrements maison. Vérifier que c'est bien le cas avant toute diffusion large.

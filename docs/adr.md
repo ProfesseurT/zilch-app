@@ -222,7 +222,7 @@ Modules ES natifs, `node --test`, typage par annotations JSDoc, aucune dépendan
 | Maintenance | Chaîne d'outils à suivre |
 
 **Pour :** typage strict, écosystème confortable.
-**Contre :** un `node_modules`, une configuration de sous-chemin `/Zilch/`, des dépendances qui vieillissent, et une chaîne indéboguable par le mainteneur si elle casse dans six mois.
+**Contre :** un `node_modules`, une configuration de sous-chemin `/zilch-app/`, des dépendances qui vieillissent, et une chaîne indéboguable par le mainteneur si elle casse dans six mois.
 
 ### Option B — JavaScript natif *(retenue)*
 
@@ -236,7 +236,7 @@ Le moteur fait quelques centaines de lignes de logique pure. Le typage apporte b
 ## Conséquences
 
 - **Contrepartie critique** : sans build, le service worker sert indéfiniment l'ancienne version. Une constante de version en tête du service worker, incrémentée à chaque déploiement, avec purge des caches obsolètes à l'activation, devient obligatoire — et son oubli est silencieux.
-- Le chemin de déploiement doit respecter la casse exacte du dépôt : `/Zilch/`, pas `/zilch/`.
+- Le chemin de déploiement doit respecter la casse exacte du dépôt : `/zilch-app/`, tout en minuscules.
 - Aucun CDN, sous peine de casser le mode hors ligne.
 
 **Coût de réouverture :** faible. Ajouter un build plus tard n'invalide aucun code écrit.
