@@ -36,15 +36,26 @@ Ne jamais modifier silencieusement une règle pour simplifier le code. Si une co
 
 ## 3. Comment on travaille ici
 
+**Claude travaille dans ce dossier. Ted ne retape rien.**
+
+- Claude **modifie les fichiers directement ici**. Il ne décrit pas un changement en prose pour que Ted le refasse à la main.
+- **Claude ne pousse jamais.** Ted colle `./pousser.sh` dans son terminal, lui seul.
+- Si Ted doit lancer quelque chose lui-même, ça lui arrive en **un seul bloc à coller**, commenté, exécutable tel quel.
 - **Reformuler avant d'agir.** Dire ce qu'on a compris, puis faire.
-- **Mesurer avant d'affirmer.** Tout chiffre avancé dit d'où il vient et comment il a été obtenu. Une intuition de performance ou d'ergonomie ne vaut rien sans protocole.
+- **Mesurer avant d'affirmer.** Tout chiffre dit d'où il vient. Une intuition ne vaut rien sans protocole.
 - **Signaler, ne pas corriger en douce.** Une incohérence trouvée en chemin se signale. On la corrige seulement si c'est notre propre changement qui l'a rendue fausse.
-- **Tout ce qu'il y a à faire est livré en script à coller dans le terminal.** Un seul bloc, commenté, exécutable tel quel. Aucune étape décrite en prose à refaire à la main.
-- **Ted pousse lui-même.** On lui donne la commande, on ne pousse jamais à sa place.
 - **Confirmation avant tout geste irréversible.**
-- **Pas de jargon de développeur.** Ted est néophyte en informatique et comprend vite : expliquer l'effet, pas la mécanique interne.
-- **Aucun tiret cadratin** nulle part, ni dans le code, ni dans les textes, ni dans les réponses.
-- Une décision structurante s'écrit dans `docs/adr.md`, le récit du lot dans `JOURNAL.md`, dans le même commit que le code.
+- **Pas de jargon.** Expliquer l'effet en deux ou trois mots, jamais la mécanique interne.
+- **Aucun tiret cadratin**, nulle part.
+
+**Avant de rendre la main à Ted, quatre choses, dans cet ordre :**
+
+1. `npm test` au vert.
+2. `VERSION` incrémentée dans `service-worker.js` si un fichier servi hors ligne a changé.
+3. L'entrée du lot écrite dans `JOURNAL.md`, avec ses mesures.
+4. Une décision structurante, s'il y en a une, écrite dans `docs/adr.md`.
+
+Puis donner la commande de `pousser.sh`, rien de plus.
 
 ---
 
@@ -59,7 +70,7 @@ cd ~/Projets/zilch-app
 ./pousser.sh "ce qui a changé"
 ```
 
-Le script fait trois contrôles dans l'ordre et s'arrête au premier qui échoue :
+Le script fait quatre contrôles dans l'ordre et s'arrête au premier qui échoue. Il finit par interroger le site en ligne et annonce **TOUT EST OK**, ou pas :
 
 1. **`VERSION` en tête de `service-worker.js` a-t-elle changé ?** C'est la seule panne silencieuse du projet : sans nouveau numéro, l'iPhone sert l'ancienne version pour toujours et rien ne le signale. Le script ne l'exige que si un fichier réellement servi hors ligne a bougé. Toucher à `docs/` ou `tests/` n'atteint pas Safari.
 2. **`npm test` au vert.**

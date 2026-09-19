@@ -2,7 +2,7 @@
 #
 # ZILCH — envoi sur GitHub depuis un terminal macOS ou Linux.
 #
-# Equivalent de pousser.bat, avec trois choses que la version Windows n'a pas :
+# Quatre controles, dans l'ordre. Il s'arrete au premier qui echoue :
 #
 #   1. Il REFUSE de pousser si VERSION du service worker n'a pas bouge alors
 #      qu'un fichier servi hors ligne a change. C'est la seule panne silencieuse
@@ -11,6 +11,7 @@
 #      ne voit pas l'historique git.
 #   2. Il tire avant de pousser. Avec deux machines, sans ca le push est rejete.
 #   3. Il demande le message de commit au lieu de l'ecrire en dur.
+#   4. Apres le push, il interroge le site en ligne et dit TOUT EST OK, ou pas.
 #
 # Usage :
 #     ./pousser.sh                  demande le message
@@ -157,9 +158,45 @@ git push origin "$BRANCHE" || echec "L'envoi a echoue.
 
 version_finale=$(sed -n "s/^const VERSION = '\([^']*\)'.*/\1/p" service-worker.js | head -1)
 
-printf '\n%s==========================================%s\n' "$vert" "$fin"
-ok "  ENVOYE."
-printf '\n  L%sapplication se met a jour sur ton iPhone\n' "'"
-printf '  dans la minute : le cache passe en %s%s%s.\n' "$gras" "$version_finale" "$fin"
+# --- 6. Le seul controle qui prouve que ca a marche --------------------------
+#
+# Le push peut reussir et le site rester a l'ancienne version : GitHub met une
+# a deux minutes a publier. On interroge donc le site en ligne jusqu'a ce qu'il
+# serve le bon numero, deux minutes au maximum.
+
+titre "Verification en ligne"
+
+url="https://professeurt.github.io/zilch-app/service-worker.js"
+trouve=""
+if command -v curl >/dev/null 2>&1; then
+  printf 'Attente de la publication '
+  for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
+    trouve=$(curl -fsS -H 'Cache-Control: no-cache' "$url?t=$(date +%s)" 2>/dev/null \
+      | sed -n "s/^const VERSION = '\([^']*\)'.*/\1/p" | head -1)
+    [ "$trouve" = "$version_finale" ] && break
+    printf '.'
+    sleep 10
+  done
+  printf '\n'
+fi
+
+printf '\n%s==========================================%s\n' "$gras" "$fin"
+if [ "$trouve" = "$version_finale" ]; then
+  printf '%s  TOUT EST OK.%s\n\n' "$vert" "$fin"
+  printf '  Le site en ligne sert bien %s%s%s.\n' "$gras" "$version_finale" "$fin"
+  printf '  Ouvre l%sapplication sur ton iPhone : elle se met a jour seule.\n' "'"
+elif [ -z "$trouve" ]; then
+  printf '%s  ENVOYE, MAIS PAS VERIFIE.%s\n\n' "$jaune" "$fin"
+  printf '  Le code est parti sur GitHub, ca c%sest sur.\n' "'"
+  printf '  Impossible de joindre le site pour le confirmer : pas de reseau,\n'
+  printf '  ou curl absent. Recharge la page dans deux minutes.\n'
+else
+  printf '%s  PAS OK.%s\n\n' "$rouge" "$fin"
+  printf '  Le code est parti, mais apres deux minutes le site sert encore %s%s%s\n' "$gras" "$trouve" "$fin"
+  printf '  au lieu de %s%s%s.\n\n' "$gras" "$version_finale" "$fin"
+  printf '  Attends cinq minutes et relance ./pousser.sh : il ne repoussera rien,\n'
+  printf '  il se contentera de reverifier. Si c%sest toujours faux, regarde\n' "'"
+  printf '  l%songlet Actions sur GitHub : la publication a echoue.\n' "'"
+fi
 printf '\n  https://professeurt.github.io/zilch-app/\n'
-printf '%s==========================================%s\n\n' "$vert" "$fin"
+printf '%s==========================================%s\n\n' "$gras" "$fin"
