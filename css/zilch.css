@@ -601,11 +601,12 @@ body:has(#e-partie.actif){ overflow:hidden;
    Il intercepte les taps VOLONTAIREMENT, c'est un rideau : le tap le leve. */
 
 #eveil{ position:fixed; inset:0; z-index:90; display:none;
-  background:#000; color:#00FF66; padding:0 24px;
+  background:#000; color:#00FF66;
+  padding:calc(var(--hg) + 14px) 14px 0;
   font-family:'Share Tech Mono',ui-monospace,Menlo,'Courier New',monospace;
-  align-items:center; justify-content:center }
+  align-items:flex-start; justify-content:flex-start }
 #eveil.on{ display:flex }
-#eveil .texte{ font-size:1.5rem; letter-spacing:.06em;
-  text-shadow:0 0 10px rgba(0,255,102,.55) }
+#eveil .texte{ font-size:0.9375rem; letter-spacing:.04em; line-height:1.4;
+  text-shadow:0 0 6px rgba(0,255,102,.45) }
 #eveil .texte::after{ content:'_'; animation:curseur 1s step-end infinite }
 @keyframes curseur{ 50%{ opacity:0 } }

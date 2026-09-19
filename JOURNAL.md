@@ -37,7 +37,7 @@ Cinq tests dans `tests/table.test.js`. Aucune règle touchée, aucun fichier ajo
 
 **Le thème Matrix ouvre une partie comme le film.**
 
-Juste après Démarrer, un écran noir et « Wake up, Neo... » qui s'écrit lettre par lettre en vert, curseur clignotant. Uniquement en thème Matrix.
+Juste après Démarrer, un écran noir et « Wake up, Neo... » qui s'écrit lettre par lettre en vert, curseur clignotant, en haut à gauche et en petit, comme une ligne de terminal. Uniquement en thème Matrix.
 
 Durée totale 2550 ms, mesurée sur les constantes du code : 15 caractères à 110 ms, puis 900 ms de lecture. Une fois par partie, donc 2550 ms pour environ 105 tours. Le même effet joué à chaque tour aurait coûté 4 minutes 34 par partie.
 
