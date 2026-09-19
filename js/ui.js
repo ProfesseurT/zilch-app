@@ -494,7 +494,8 @@ function rendreNouvelle() {
   const root = $('choix-joueurs');
   root.innerHTML = '';
   if (!dispo.length) {
-    root.append(el('<div class="vide">Ajoute d\'abord des joueurs.</div>'));
+    // Jamais une impasse : le champ de creation est juste en dessous.
+    root.append(el('<div class="vide">Personne pour l\'instant. Ajoute les joueurs juste en dessous.</div>'));
     return;
   }
   for (const p of dispo) {
@@ -509,6 +510,30 @@ function rendreNouvelle() {
     root.append(puce);
   }
 }
+
+// Creer un joueur sans quitter l'ecran. C'est le geste du premier soir : la
+// table est montee, personne n'existe encore, et repartir dans l'onglet
+// Joueurs pour revenir ici coute quatre allers-retours.
+$('b-joueur-express').onclick = async () => {
+  const champ = $('joueur-express');
+  try {
+    const etatDisque = S;
+    S = store.addPlayer(S, champ.value);
+    // Le joueur cree ici entre directement dans l'ordre du tour : on vient de
+    // le nommer, le selectionner ensuite serait un tap pour rien.
+    selection.push(S.players.at(-1).id);
+    champ.value = '';
+    if (!(await sauver(etatDisque))) return;
+    rendreNouvelle();
+    dire('m-nouvelle', 'Ajouté et placé dans l\'ordre du tour.', 'ok');
+  } catch (err) { dire('m-nouvelle', err.message, 'ko'); }
+};
+$('joueur-express').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') $('b-joueur-express').click();
+});
+
+// Renommer, archiver, supprimer : ca reste l'affaire de l'onglet Joueurs.
+$('b-vers-joueurs').onclick = () => aller('joueurs');
 
 $('b-geo').onclick = () => {
   if (!navigator.geolocation) return dire('m-nouvelle', 'Position indisponible sur cet appareil.', 'ko');

@@ -14,6 +14,25 @@
 
 ---
 
+## Lot 12 — 2026-09-19 · à pousser
+
+**On monte la table sans quitter l'écran.**
+
+Au premier soir, sans un seul joueur enregistré, l'écran Nouvelle partie affichait « Ajoute d'abord des joueurs » et rien d'autre. Pas de champ, pas de bouton, pas de lien : la seule sortie était la barre du bas, et il fallait deviner l'onglet Joueurs puis revenir. Constat lu dans `rendreNouvelle()`.
+
+- Un champ et un bouton **Ajouter à la table**, dans la carte « Qui joue », toujours visibles. Un joueur créé là entre directement dans l'ordre du tour : l'avoir nommé vaut sélection.
+- La touche Entrée ajoute aussi, pour enchaîner quatre prénoms sans viser un bouton entre chaque.
+- Un bouton discret **Gérer les joueurs** mène à l'écran complet. Renommer, archiver et supprimer y restent, ils n'ont rien à faire au moment de monter une table.
+- Le message de l'écran vide désigne maintenant le champ qui est juste en dessous.
+
+Cinq tests dans `tests/table.test.js`. Aucune règle touchée, aucun fichier ajouté, aucun style nouveau : le champ réutilise ceux de l'écran Joueurs.
+
+**Écarté volontairement.** Renommer et archiver depuis cet écran, qui dupliquerait l'écran Joueurs sur celui qu'on a déjà passé deux lots à dégonfler.
+
+**Signalé, pas corrigé.** Le clavier d'iOS s'ouvre sur cet écran et masque le bas de la page, dont le bouton Démarrer. L'écran défile, donc ce n'est pas le piège du lot 6, où le bouton était inatteignable. À vérifier au protocole du lot 8 avant de le déclarer sans effet.
+
+---
+
 ## Lot 11 — 2026-09-19 · à pousser
 
 **Le thème Matrix ouvre une partie comme le film.**
