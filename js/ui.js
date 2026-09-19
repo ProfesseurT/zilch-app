@@ -543,8 +543,45 @@ $('b-demarrer').onclick = async () => {
     $('lieu').value = '';
     if (!(await sauver(etatDisque))) return;
     aller('partie');
+    eveiller();
   } catch (err) { dire('m-nouvelle', err.message, 'ko'); }
 };
+
+// --- Eveil : le rideau du theme Matrix --------------------------------------
+//
+// Une fois par partie, au demarrage, et seulement en theme Matrix. Il ne porte
+// AUCUNE information : il est saute entierement quand les animations sont
+// reduites. Un tap le leve a tout moment, et un minuteur le leve tout seul si
+// personne ne tape. Il ne peut donc jamais bloquer une table.
+
+const EVEIL_TEXTE = 'Wake up, Neo...';
+const EVEIL_LETTRE = 110;   // ms par caractere
+const EVEIL_PAUSE = 900;    // temps de lecture, une fois la phrase ecrite
+let minuteursEveil = [];
+
+function fermerEveil() {
+  minuteursEveil.forEach(clearTimeout);
+  minuteursEveil = [];
+  const e = $('eveil');
+  e.classList.remove('on');
+  e.querySelector('.texte').textContent = '';
+}
+
+function eveiller() {
+  if (document.documentElement.dataset.theme !== 'matrix') return;
+  if (MOUVEMENT_REDUIT.matches) return;
+  const e = $('eveil');
+  const cible = e.querySelector('.texte');
+  cible.textContent = '';
+  e.classList.add('on');
+  e.onclick = fermerEveil;
+  for (let i = 1; i <= EVEIL_TEXTE.length; i++) {
+    minuteursEveil.push(setTimeout(() => { cible.textContent = EVEIL_TEXTE.slice(0, i); },
+      i * EVEIL_LETTRE));
+  }
+  // Le filet : meme sans aucun tap, le rideau se leve.
+  minuteursEveil.push(setTimeout(fermerEveil, EVEIL_TEXTE.length * EVEIL_LETTRE + EVEIL_PAUSE));
+}
 
 // --- Ecran de partie --------------------------------------------------------
 

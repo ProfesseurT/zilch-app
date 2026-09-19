@@ -400,6 +400,32 @@ Le §12 décrit une identité visuelle unique. Le thème « Tableau » s'en éca
 
 ---
 
+# ADR-10 : Un thème peut ouvrir une partie par un rideau
+
+## Contexte
+
+Le thème Matrix change déjà la police, les sons et le décor. Il manquait le geste d'ouverture du film : un écran noir et une phrase qui s'écrit. Le §10 de la spécification proscrit les transitions entre écrans, pour une raison chiffrée : une partie compte environ 105 tours, et tout effet chronométré s'y multiplie.
+
+## Décision
+
+Un thème peut afficher un rideau plein écran **au démarrage d'une partie, et seulement là**, à quatre conditions : il ne porte aucune information, un tap le lève, un minuteur le lève tout seul, et il est entièrement supprimé quand les animations sont réduites.
+
+## Analyse
+
+Le §10 vise les effets qui se répètent. Ce rideau ne se joue qu'une fois par partie, soit une fois pour environ 105 tours : son coût cumulé est de 2,6 secondes, contre 4 minutes et 20 secondes pour le même effet joué à chaque tour. La règle du §10 n'est donc pas contredite, elle est bornée.
+
+Le vrai risque n'est pas la durée, c'est le blocage. Un rideau qui ne se lève pas immobilise le seul téléphone qui détient les scores. D'où deux sorties indépendantes, le tap et le minuteur : il faudrait que les deux tombent en panne pour piéger une table.
+
+## Conséquences
+
+- `#eveil` dans `index.html`, son style en fin de `css/zilch.css`, trois fonctions dans `js/ui.js`, six tests dans `tests/eveil.test.js`.
+- Ajouter un rideau à un autre thème : une condition de thème et une phrase. Les quatre conditions ci-dessus restent obligatoires.
+- Le poids hors ligne n'augmente pas : aucun fichier ajouté.
+
+**Coût de réouverture :** faible. Retirer le rideau, c'est supprimer un bloc dans chacun des trois fichiers et le fichier de tests.
+
+---
+
 ## Ce qui reste ouvert
 
 | Point | Valeur par défaut appliquée | À trancher par |

@@ -14,6 +14,26 @@
 
 ---
 
+## Lot 11 — 2026-09-19 · à pousser
+
+**Le thème Matrix ouvre une partie comme le film.**
+
+Juste après Démarrer, un écran noir et « Wake up, Neo... » qui s'écrit lettre par lettre en vert, curseur clignotant. Uniquement en thème Matrix.
+
+Durée totale 2550 ms, mesurée sur les constantes du code : 15 caractères à 110 ms, puis 900 ms de lecture. Une fois par partie, donc 2550 ms pour environ 105 tours. Le même effet joué à chaque tour aurait coûté 4 minutes 34 par partie.
+
+Trois garde-fous, parce qu'un rideau qui ne se lève pas immobilise le seul téléphone qui détient les scores :
+
+- Un tap n'importe où le lève.
+- Un minuteur le lève tout seul si personne ne tape.
+- Animations réduites : il ne s'affiche pas du tout. Il ne porte aucune information, donc on le supprime au lieu de le figer, contrairement au flash du Z.
+
+Six tests dans `tests/eveil.test.js` verrouillent ces conditions. Voir **ADR-10**, qui borne le §10 au lieu de le contredire : la règle vise les effets qui se répètent.
+
+**Écarté volontairement.** Le son. Le §14 veut des enregistrements maison et la question de provenance des sons est déjà ouverte : ce n'est pas le moment d'en ajouter un. La pluie de caractères derrière le texte, aussi : le rideau est noir, comme demandé.
+
+---
+
 ## Lot 10 — 2026-09-19 · à pousser
 
 **L'application maigrit de ce qu'elle ne joue pas.**
