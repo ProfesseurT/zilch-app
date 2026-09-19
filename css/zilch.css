@@ -421,3 +421,176 @@ body:has(#e-partie.actif){ overflow:hidden;
 /* Ce qui valide se colle au bas de l'ecran, sous le pouce. Tout l'espace
    libre est repousse ici, il n'y a plus de creux sous le bouton. */
 .feuille .bas{ margin-top:auto }
+
+/* =========================================================================
+   THEME « MATRIX » - terminal vert sur noir.
+   Police a chasse fixe embarquee (Share Tech Mono, licence OFL, dans le
+   depot), vert phosphore, angles vifs, halo lumineux sur les grands
+   chiffres. La pluie de caracteres vit dans un canvas separe, pilote par
+   js/pluie.js : elle ne tourne QUE sur l'accueil et pendant les flashs, donc
+   jamais pendant les 105 tours d'une partie.
+   Ecart assume au §12, comme le theme « tableau ».
+   ========================================================================= */
+
+/* Chargee uniquement si un element l'utilise, donc sans cout pour les deux
+   autres themes. Fichier local : aucune requete distante, hors ligne intact. */
+@font-face{
+  font-family:'Share Tech Mono';
+  src:url('../polices/ShareTechMono-Regular.woff2') format('woff2');
+  font-weight:400; font-style:normal; font-display:swap;
+}
+
+[data-theme="matrix"]{
+  --noir:#050A07; --panneau:#0A130D; --trait:#17301F;
+  --texte:#CFFFE0; --faible:#6FB088; --accent:#00FF66; --signal:#A8FF60;
+  --danger:#FF4D4D;
+  --mono:'Share Tech Mono',ui-monospace,Menlo,'Courier New',monospace;
+  --rayon:0px; --ombre:none;
+  --lueur:0 0 10px rgba(0,255,102,.55);
+  --cobalt:var(--accent); --cobalt-fonce:var(--accent); --cobalt-clair:var(--trait);
+  --creme:var(--noir); --creme-ombre:var(--trait); --blanc:var(--panneau);
+  --or:var(--signal); --terre:var(--danger); --vert:var(--accent);
+  --encre:var(--texte); --gris:var(--faible); --bord-discret:#2A5238;
+  --or-nav:var(--accent);
+}
+
+[data-theme="matrix"] body{
+  background-color:var(--noir); background-image:none;
+  font-family:var(--mono); letter-spacing:.01em;
+}
+
+[data-theme="matrix"] .marque{
+  font-family:var(--mono); font-size:2rem; letter-spacing:.3em;
+  color:var(--accent); text-shadow:var(--lueur); text-align:center;
+  border-bottom:1px solid var(--trait); padding-bottom:10px; margin:2px 0 14px;
+}
+[data-theme="matrix"] .marque span{
+  color:var(--faible); font-family:var(--mono); letter-spacing:.22em; text-shadow:none;
+}
+
+[data-theme="matrix"] .carte{
+  background:var(--panneau); border:1px solid var(--trait); border-radius:0;
+  box-shadow:none; padding:14px;
+}
+[data-theme="matrix"] h2{ font-family:var(--mono); color:var(--accent); letter-spacing:.06em }
+[data-theme="matrix"] .legende{ color:var(--faible); letter-spacing:.18em }
+
+[data-theme="matrix"] button{
+  font-family:var(--mono); border-radius:0; box-shadow:none;
+  border:1px solid var(--trait); background:var(--panneau); color:var(--texte);
+  text-transform:uppercase; letter-spacing:.12em; font-size:0.9375rem;
+}
+[data-theme="matrix"] button:active{ transform:none; background:var(--trait) }
+[data-theme="matrix"] button.plein{ background:transparent; color:var(--accent);
+  border:1px solid var(--accent); text-shadow:var(--lueur) }
+[data-theme="matrix"] button.or{ background:var(--signal); color:#06180A;
+  border-color:var(--signal); text-shadow:none; font-weight:700 }
+[data-theme="matrix"] button.terre{ background:transparent; color:var(--danger);
+  border:1px solid var(--danger) }
+[data-theme="matrix"] button.discret{ background:transparent; color:var(--faible);
+  border-color:var(--trait) }
+[data-theme="matrix"] button.danger{ background:transparent; color:var(--danger);
+  border:1px solid var(--danger) }
+[data-theme="matrix"] button.geant{ font-size:1.1875rem; letter-spacing:.16em }
+
+[data-theme="matrix"] input,[data-theme="matrix"] select{
+  font-family:var(--mono); border-radius:0; background:var(--noir);
+  border:1px solid var(--trait); color:var(--accent);
+}
+[data-theme="matrix"] input::placeholder{ color:#5F9E77 }
+[data-theme="matrix"] input.geant{ font-family:var(--mono); text-shadow:var(--lueur) }
+
+/* Le bloc du joueur actif : cadre vert et chiffre lumineux. */
+[data-theme="matrix"] .actif-bloc{
+  background:var(--panneau); border:1px solid var(--accent); color:var(--texte);
+}
+[data-theme="matrix"] .actif-bloc .qui{
+  font-family:var(--mono); color:var(--accent); letter-spacing:.1em;
+  text-transform:uppercase; text-shadow:var(--lueur);
+}
+/* 2,5rem et pas 3 : mesure a l'appui, la chasse fixe rend l'ecran de partie
+   plus haut que les autres themes, et chaque pixel gagne ici est un pixel de
+   tableau des scores qui repasse au-dessus du pli. */
+[data-theme="matrix"] .actif-bloc .total{
+  font-family:var(--mono); color:var(--signal); font-size:2.5rem; line-height:1;
+  text-shadow:0 0 14px rgba(168,255,96,.5); font-variant-numeric:tabular-nums;
+}
+[data-theme="matrix"] .actif-bloc .reste{ color:var(--faible); opacity:1 }
+[data-theme="matrix"] .actif-bloc.change{ animation:balayage .18s steps(3,end) }
+@keyframes balayage{ from{ background:#0F2415 } to{ background:var(--panneau) } }
+
+[data-theme="matrix"] .ligne{ border-radius:0; border-bottom:1px solid var(--trait); padding:7px 0 }
+[data-theme="matrix"] .ligne.courant{ background:transparent; box-shadow:none;
+  border-left:2px solid var(--accent); padding-left:9px }
+[data-theme="matrix"] .ligne .nom{ text-transform:uppercase; letter-spacing:.06em }
+[data-theme="matrix"] .ligne .pts{ font-family:var(--mono); color:var(--accent);
+  font-variant-numeric:tabular-nums }
+[data-theme="matrix"] .ligne .serie{ color:var(--danger) }
+
+[data-theme="matrix"] .bandeau{ border-radius:0; border:1px solid; padding:11px 13px }
+[data-theme="matrix"] .bandeau.info{ background:var(--panneau); border-color:var(--trait); color:var(--texte) }
+[data-theme="matrix"] .bandeau.alerte{ background:var(--panneau); border-color:var(--danger); color:var(--texte) }
+[data-theme="matrix"] .bandeau.final{ background:var(--panneau); border-color:var(--signal); color:var(--signal) }
+
+[data-theme="matrix"] .des button{ font-family:var(--mono); font-size:1.5rem }
+[data-theme="matrix"] .des button[aria-pressed="true"]{ background:transparent;
+  color:var(--accent); border-color:var(--accent); text-shadow:var(--lueur) }
+
+[data-theme="matrix"] #flash .mot{
+  font-family:var(--mono); font-size:26vw; letter-spacing:.06em; color:var(--accent);
+  text-shadow:0 0 26px rgba(0,255,102,.75), 0 0 70px rgba(0,255,102,.35);
+}
+[data-theme="matrix"] #flash.on .mot{ animation:secousse .18s steps(2,end) 3 }
+@keyframes secousse{ 0%{ transform:translateX(0) } 50%{ transform:translateX(-1.2%) } 100%{ transform:translateX(0) } }
+
+[data-theme="matrix"] nav{ background:var(--noir); border-top:1px solid var(--accent) }
+/* La chasse fixe est plus large : a 0,1em les cinq libelles de la barre se
+   touchaient sur un 375 px. Mesure a l'appui, 0,02em les separe nettement. */
+[data-theme="matrix"] nav button{ font-family:var(--mono); color:var(--faible);
+  text-transform:uppercase; letter-spacing:.02em; font-size:10px; border:0 }
+[data-theme="matrix"] nav button[aria-current="page"]{ color:var(--accent); text-shadow:var(--lueur) }
+
+[data-theme="matrix"] .puce{ border-radius:0; background:var(--panneau); border:1px solid var(--trait) }
+[data-theme="matrix"] .puce.choisi{ border-color:var(--accent); background:var(--panneau) }
+[data-theme="matrix"] .puce .rang{ font-family:var(--mono); color:var(--signal) }
+[data-theme="matrix"] .kpi b{ font-family:var(--mono); color:var(--accent) }
+[data-theme="matrix"] .kpi.positif b{ color:var(--signal) }
+[data-theme="matrix"] .kpi.negatif b{ color:var(--danger) }
+[data-theme="matrix"] .jauge{ background:var(--trait); border-radius:0 }
+[data-theme="matrix"] .jauge span{ background:var(--accent) }
+[data-theme="matrix"] .rangs .rang-item{ border-radius:0; background:var(--panneau); border-color:var(--trait) }
+[data-theme="matrix"] .rangs .rang-item.premier{ border-color:var(--signal); color:var(--signal) }
+[data-theme="matrix"] table.bareme td{ border-bottom:1px solid var(--trait) }
+[data-theme="matrix"] table.bareme td:last-child{ font-family:var(--mono); color:var(--signal) }
+[data-theme="matrix"] .modale{ background:rgba(5,10,7,.9) }
+[data-theme="matrix"] .modale .boite{ border-radius:0; border:1px solid var(--accent); background:var(--panneau) }
+[data-theme="matrix"] .modale .vainqueur{ font-family:var(--mono); color:var(--accent);
+  letter-spacing:.08em; text-transform:uppercase; text-shadow:var(--lueur) }
+[data-theme="matrix"] .offre{ border:1px solid var(--signal) }
+[data-theme="matrix"] .offre-texte b{ color:var(--signal) }
+[data-theme="matrix"] .barre-action{ border-top:1px solid var(--accent); background:var(--noir) }
+[data-theme="matrix"] .f-affichage{ font-family:var(--mono); background:var(--panneau);
+  border:1px solid var(--accent); color:var(--signal); text-shadow:var(--lueur);
+  font-variant-numeric:tabular-nums }
+[data-theme="matrix"] .pave button{ font-family:var(--mono); font-size:1.5rem }
+[data-theme="matrix"] .pave button.appoint{ color:var(--accent) }
+[data-theme="matrix"] .feuille{ background:var(--noir) }
+[data-theme="matrix"] .feuille-tete span{ font-family:var(--mono); color:var(--accent) }
+[data-theme="matrix"] .punitif.chaud{ color:var(--signal) }
+[data-theme="matrix"] .msg.ok{ color:var(--accent) }
+[data-theme="matrix"] .msg.ko{ color:var(--danger) }
+[data-theme="matrix"] .vide{ color:var(--faible) }
+[data-theme="matrix"] .themes button[aria-pressed="true"]{ outline-color:var(--accent) }
+
+/* --- Pluie de caracteres -------------------------------------------------
+   Canvas plein ecran, DERRIERE tout le contenu, et jamais au-dessus d'un
+   bouton : pointer-events est neutralise, aucun tap ne peut etre intercepte.
+   Il n'est dans le document que sous le theme matrix, et js/pluie.js ne
+   l'anime que sur l'accueil et pendant un flash. */
+#pluie{ position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.5;
+  display:none }
+[data-theme="matrix"] #pluie{ display:block }
+/* Seuls les ecrans ont besoin d'un contexte d'empilement : nav, flash et
+   feuille sont deja en position fixe, et leur imposer position:relative les
+   decrocherait du haut de l'ecran. Ici, on ne touche qu'au z-index. */
+[data-theme="matrix"] .ecran{ position:relative; z-index:1 }

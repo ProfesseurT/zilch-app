@@ -52,6 +52,18 @@ test('tout le code et le style de l application sont precaches', () => {
   }
 });
 
+test('la police embarquee est precachee et reellement presente', () => {
+  // Une police appelee par la feuille de style et absente du precache se
+  // telecharge tant qu'il y a du reseau, puis disparait en mode avion : le
+  // theme matrix retomberait sur une police du systeme sans rien signaler.
+  const css = lire('css/zilch.css');
+  for (const m of css.matchAll(/url\('\.\.\/([^']+\.woff2)'\)/g)) {
+    assert.ok(precache.includes(`./${m[1]}`), `police absente du precache : ${m[1]}`);
+    assert.ok(existsSync(racine + m[1]), `police declaree mais absente du disque : ${m[1]}`);
+  }
+  assert.ok(existsSync(racine + 'polices/OFL.txt'), 'la licence de la police doit rester dans le depot');
+});
+
 test('toutes les icones declarees sont precachees et existent', () => {
   const declarees = new Set(manifeste.icons.map((i) => i.src));
   for (const m of html.matchAll(/href="(\.\/icon-[^"]+)"/g)) declarees.add(m[1]);

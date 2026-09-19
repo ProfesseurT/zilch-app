@@ -1,6 +1,6 @@
 # ZILCH — Décisions d'architecture
 
-Huit décisions structurantes, les sept premières prises pendant la spécification. Chacune est réversible à un coût précis, indiqué en fin de fiche. Ce document sert à ne pas les re-litiger sans raison, et à savoir quoi rouvrir si le contexte change.
+Neuf décisions structurantes, les sept premières prises pendant la spécification. Chacune est réversible à un coût précis, indiqué en fin de fiche. Ce document sert à ne pas les re-litiger sans raison, et à savoir quoi rouvrir si le contexte change.
 
 **Déciders :** Ted (produit et arbitrage), Claude (proposition et mesure)
 
@@ -357,6 +357,46 @@ La barre du bas est exclue parce que sa hauteur est verrouillée par `--nav-h`, 
 - Les bornes sont deux nombres dans `reglerEchelleTexte`, dans `js/ui.js`.
 
 **Coût de réouverture :** faible. Déplacer une borne est un nombre. Sortir la barre du bas de son exception demande de revoir `--nav-h`.
+
+---
+
+# ADR-9 : Un thème habille aussi la voix et le décor, pas seulement les couleurs
+
+**Statut :** Accepté · **Date :** 2026-09-19
+
+## Contexte
+
+Les thèmes « Azulejos » et « Tableau » ne changeaient que des couleurs et des formes. Le thème « Matrix » demandait trois choses qu'aucun thème n'avait touchées : une police qui n'existe pas sur l'iPhone, des sons différents, et une animation de fond. Chacune ouvre une question que le projet avait jusque-là évitée.
+
+## Décision
+
+Un thème peut changer trois choses de plus, à trois conditions fermes.
+
+1. **Une police embarquée.** Share Tech Mono, licence SIL Open Font License 1.1, fichier `polices/ShareTechMono-Regular.woff2` de 16,5 ko, avec sa licence à côté dans `polices/OFL.txt`. Aucun appel distant : la règle du hors ligne total tient.
+2. **Une voix propre.** `js/sounds.js` porte un manifeste par thème. Les fichiers d'un thème vivent dans leur sous-dossier, ici `sons/matrix/`. Le service worker précache les sons de **tous** les thèmes, pas seulement ceux du thème actif : changer de thème en mode avion doit sonner.
+3. **Un décor, jamais une information.** La pluie de caractères vit dans un canvas séparé, `js/pluie.js`, derrière tout le contenu, avec les taps neutralisés. Elle ne s'anime que sur l'accueil et pendant un flash. L'écran de partie garde un fond noir figé.
+
+## Alternatives écartées
+
+**Une police du système à la place d'une police embarquée.** Coût nul, mais l'effet terminal disparaît : c'est précisément ce que le thème vient chercher.
+
+**Une pluie permanente sur tous les écrans.** Plus immersive, mais une partie dure environ 105 tours : une animation plein écran qui tourne du début à la fin chauffe le téléphone qui tient la partie, pour un décor que personne ne regarde pendant qu'il saisit un score.
+
+**Des sons téléchargés d'une banque libre.** Écarté : licence à vérifier à chaque fichier, et le §14 de la spécification veut des sons maison. Les sons Matrix sont fabriqués par synthèse, donc sans licence tierce, mais ils ne sont pas non plus des enregistrements des joueurs : c'est l'écart assumé ci-dessous.
+
+## Analyse
+
+Le §14 de la spécification demande que les sons soient enregistrés par les joueurs eux-mêmes. C'était une réponse à une question de licence et d'identité. Pour un thème de pastiche, un enregistrement maison n'aurait pas de sens : la voix cherchée est celle d'une machine. La synthèse répond au même souci de licence, coût nul et origine claire, sans prétendre remplacer les trois sons d'identité du jeu, qui restent ceux des thèmes Azulejos et Tableau.
+
+Le §12 décrit une identité visuelle unique. Le thème « Tableau » s'en écartait déjà, et cet écart est assumé au même titre.
+
+## Conséquences
+
+- Ajouter un thème sonore : un sous-dossier dans `sons/`, une entrée dans `MANIFESTES`, les fichiers dans le précache. Deux tests le vérifient.
+- Ajouter une police : le fichier dans `polices/`, sa licence à côté, un `@font-face` en chemin relatif. Un test vérifie que toute police appelée par la feuille de style est précachée et présente sur le disque.
+- Le poids hors ligne de l'application augmente de 169 ko : 16,5 ko de police et 152 ko de sons.
+
+**Coût de réouverture :** faible pour la police et les sons, ce sont des fichiers et une ligne de manifeste. Moyen pour le décor : retirer la pluie demande de reprendre `js/pluie.js`, son canvas et les trois appels dans `js/ui.js`.
 
 ---
 

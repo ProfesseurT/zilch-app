@@ -18,6 +18,28 @@ export const SOUND_MANIFEST = {
   VICTORY: ['victoire.mp3'],
 };
 
+// Le theme matrix a sa propre voix : memes evenements, memes quantites de
+// variantes, fichiers de synthese ranges dans sons/matrix/. Un theme sans
+// entree ici garde les sons d'origine.
+export const SOUND_MANIFEST_MATRIX = {
+  Z: ['matrix/z-01.mp3', 'matrix/z-02.mp3', 'matrix/z-03.mp3',
+      'matrix/z-04.mp3', 'matrix/z-05.mp3', 'matrix/z-06.mp3'],
+  Z_PLUS: ['matrix/zplus-01.mp3', 'matrix/zplus-02.mp3', 'matrix/zplus-03.mp3'],
+  PENALTY: ['matrix/penalite-01.mp3', 'matrix/penalite-02.mp3', 'matrix/penalite-03.mp3'],
+  VICTORY: ['matrix/victoire.mp3'],
+};
+
+export const MANIFESTES = {
+  azulejo: SOUND_MANIFEST,
+  tableau: SOUND_MANIFEST,
+  matrix: SOUND_MANIFEST_MATRIX,
+};
+
+/** Manifeste d'un theme. Un theme inconnu retombe sur les sons d'origine. */
+export function manifestePour(theme) {
+  return MANIFESTES[theme] ?? SOUND_MANIFEST;
+}
+
 export class SoundError extends Error {}
 
 // ---------------------------------------------------------------------------
@@ -75,9 +97,19 @@ export function createPicker(manifest = SOUND_MANIFEST, random = Math.random) {
   };
 }
 
-/** Tous les fichiers a precacher par le service worker. */
-export function allFiles(manifest = SOUND_MANIFEST) {
-  return Object.values(manifest).flat();
+/**
+ * Tous les fichiers a precacher par le service worker. Sans argument, il
+ * renvoie les sons de TOUS les themes : un theme change hors ligne doit
+ * sonner, et un fichier oublie ici est un silence qui n'apparait qu'en mode
+ * avion, sans la moindre erreur visible.
+ */
+export function allFiles(manifest = null) {
+  if (manifest) return Object.values(manifest).flat();
+  const tous = new Set();
+  for (const m of new Set(Object.values(MANIFESTES))) {
+    for (const f of Object.values(m).flat()) tous.add(f);
+  }
+  return [...tous];
 }
 
 // ---------------------------------------------------------------------------
@@ -93,7 +125,7 @@ let unlocked = false;
 let enCours = null;   // canal unique : un seul son audible a la fois
 
 /** Cree les elements et les precharge. A appeler une seule fois au demarrage. */
-export function preload(manifest = SOUND_MANIFEST) {
+export function preload(manifest = null) {
   for (const file of allFiles(manifest)) {
     if (elements.has(file)) continue;
     const el = new Audio(BASE + file);

@@ -5,7 +5,7 @@
 // versionne automatiquement. Sans ce numero, le cache sert indefiniment
 // l'ancienne version : un correctif pousse sur GitHub Pages n'atteint jamais
 // l'iPhone, et rien ne le signale.
-const VERSION = 'zilch-v11';
+const VERSION = 'zilch-v12';
 
 // Tout ce qui doit fonctionner hors ligne. Un fichier ajoute au projet et
 // oublie ici ne sera pas disponible en mode avion — et l'oubli est silencieux.
@@ -21,6 +21,8 @@ const A_PRECACHER = [
   './js/idb.js',
   './js/sounds.js',
   './js/veille.js',
+  './js/pluie.js',
+  './polices/ShareTechMono-Regular.woff2',
   './icon-180.png',
   './icon-192.png',
   './icon-512.png',
@@ -38,6 +40,19 @@ const A_PRECACHER = [
   './sons/penalite-02.mp3',
   './sons/penalite-03.mp3',
   './sons/victoire.mp3',
+  './sons/matrix/z-01.mp3',
+  './sons/matrix/z-02.mp3',
+  './sons/matrix/z-03.mp3',
+  './sons/matrix/z-04.mp3',
+  './sons/matrix/z-05.mp3',
+  './sons/matrix/z-06.mp3',
+  './sons/matrix/zplus-01.mp3',
+  './sons/matrix/zplus-02.mp3',
+  './sons/matrix/zplus-03.mp3',
+  './sons/matrix/penalite-01.mp3',
+  './sons/matrix/penalite-02.mp3',
+  './sons/matrix/penalite-03.mp3',
+  './sons/matrix/victoire.mp3',
 ];
 
 self.addEventListener('install', (e) => {

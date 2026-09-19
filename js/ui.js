@@ -8,7 +8,8 @@
 import * as store from './store.js';
 import * as idb from './idb.js';
 import { view, CONFIG, DICE_TABLE } from './engine.js';
-import { createPicker, preload, unlock, play, choisirSon } from './sounds.js';
+import { createPicker, preload, unlock, play, choisirSon, manifestePour } from './sounds.js';
+import * as pluie from './pluie.js';
 import * as veille from './veille.js';
 
 // --- Theme ------------------------------------------------------------------
@@ -19,14 +20,18 @@ import * as veille from './veille.js';
 const THEMES = [
   { id: 'azulejo', nom: 'Azulejos', teinte: 'linear-gradient(90deg,#1B4D8F 50%,#F5EFE1 50%)' },
   { id: 'tableau', nom: 'Tableau',  teinte: 'linear-gradient(90deg,#08090A 50%,#FF4A17 50%)' },
+  { id: 'matrix',  nom: 'Matrix',   teinte: 'linear-gradient(90deg,#050A07 50%,#00FF66 50%)' },
 ];
+
+// Couleur de la barre d'etat d'iOS, par theme.
+const TEINTE_SYSTEME = { azulejo: '#123A6B', tableau: '#08090A', matrix: '#050A07' };
 const CLE_THEME = 'zilch.theme';
 
 function poserTheme(id) {
   const choisi = THEMES.some((t) => t.id === id) ? id : 'azulejo';
   document.documentElement.dataset.theme = choisi;
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', choisi === 'tableau' ? '#08090A' : '#123A6B');
+  if (meta) meta.setAttribute('content', TEINTE_SYSTEME[choisi] ?? TEINTE_SYSTEME.azulejo);
   try { localStorage.setItem(CLE_THEME, choisi); } catch { /* mode prive */ }
   return choisi;
 }
@@ -60,7 +65,9 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const nb = (n) => Number(n || 0).toLocaleString('fr-FR');
 const quand = (iso) => { try { return new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso)); } catch { return iso; } };
 
-const picker = createPicker();
+// Le tireur de sons depend du theme : chaque theme a sa propre voix, et
+// changer de theme doit changer ce qu'on entend des le tour suivant.
+let picker = createPicker(manifestePour(document.documentElement.dataset.theme));
 
 // Garde-fou de SAISIE, pas une regle du jeu : le moteur n'a et ne doit avoir
 // aucun plafond (§6). Au-dela d'environ quatre fois le score moyen d'un tour
@@ -81,6 +88,22 @@ let dernierActif = null; // pour n'animer la bascule que quand le joueur change
 
 // --- Navigation -------------------------------------------------------------
 
+// --- Decor du theme matrix --------------------------------------------------
+// La pluie ne s'anime que sur l'accueil et pendant un flash. Partout ailleurs
+// elle est a l'arret : une partie dure environ 105 tours, et une animation
+// plein ecran qui tournerait du debut a la fin chaufferait le telephone qui
+// tient la partie.
+
+let minuteurPluie = null;
+
+function reglerPluie(nom) {
+  if (document.documentElement.dataset.theme !== 'matrix') { pluie.eteindre(); return; }
+  if (nom === 'accueil') pluie.demarrer();
+  else pluie.eteindre();   // hors accueil : fond noir net, et plus rien qui tourne
+}
+
+const ecranCourant = () => document.querySelector('.ecran.actif')?.id?.replace('e-', '') ?? 'accueil';
+
 function aller(nom) {
   document.querySelectorAll('.ecran').forEach((s) => s.classList.toggle('actif', s.id === `e-${nom}`));
   document.querySelectorAll('nav button').forEach((b) => {
@@ -93,6 +116,7 @@ function aller(nom) {
   if (nom === 'historique') rendreHistorique();
   if (nom === 'stats') rendreStats();
   if (nom === 'accueil') rendreAccueil();
+  reglerPluie(nom);
   majVeille();   // quitter la partie rend la main au systeme
   window.scrollTo({ top: 0 });
 }
@@ -182,9 +206,19 @@ function flasher(mot, couleur, nom = '') {
     f.classList.add('statique');
     clearTimeout(minuteurFlash);
     minuteurFlash = setTimeout(() => f.classList.remove('statique'), 1050);
+    souffler();
     return;
   }
   f.classList.add('on');           // non bloquant : rien n'attend sa fin
+  souffler();
+}
+
+/** Pluie le temps d'un flash, puis retour a l'etat de l'ecran affiche. */
+function souffler() {
+  if (document.documentElement.dataset.theme !== 'matrix') return;
+  pluie.demarrer();
+  clearTimeout(minuteurPluie);
+  minuteurPluie = setTimeout(() => reglerPluie(ecranCourant()), 1100);
 }
 
 // --- Accueil ----------------------------------------------------------------
@@ -200,6 +234,8 @@ function rendreThemes() {
       <span class="apercu" style="background:${t.teinte}"></span>${t.nom}</button>`);
     b.onclick = async () => {
       const choisi = poserTheme(t.id);
+      picker = createPicker(manifestePour(choisi));   // chaque theme a sa voix
+      reglerPluie(ecranCourant());
       const etatDisque = S;
       S = { ...S, settings: { ...S.settings, theme: choisi } };
       await sauver(etatDisque);
@@ -1084,7 +1120,10 @@ if ('serviceWorker' in navigator) {
     S = b.store;
     // Le store fait autorite sur le raccourci localStorage : c'est lui qui suit
     // l'utilisateur a travers un export et un changement de telephone.
-    if (S.settings?.theme) poserTheme(S.settings.theme);
+    if (S.settings?.theme) {
+      poserTheme(S.settings.theme);
+      picker = createPicker(manifestePour(document.documentElement.dataset.theme));
+    }
     if (b.persistence.supported && !b.persistence.granted) {
       console.info('[ZILCH] stockage persistant refuse par le systeme : exporter plus souvent.');
     }
@@ -1101,4 +1140,5 @@ if ('serviceWorker' in navigator) {
   rendreAccueil();
   const g = partieEnCours();
   if (g) { partieId = g.id; aller('partie'); }
+  else reglerPluie('accueil');
 })();

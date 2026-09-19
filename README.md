@@ -6,17 +6,19 @@ hors ligne, sans compte ni serveur. Application web installée sur l'écran d'ac
 ## Structure
 
     index.html  manifest.json  service-worker.js  icon-*.png   la PWA servie
-    js/       engine.js store.js idb.js sounds.js ui.js        le code
-    css/      zilch.css                                        deux thèmes
-    tests/    *.test.js + simulate.js                          157 tests
+    js/       engine.js store.js idb.js sounds.js ui.js pluie.js  le code
+    css/      zilch.css                                     trois thèmes
+    tests/    *.test.js + simulate.js                          160 tests
     sons/     13 MP3                                6 Z, 3 Z+, 3 pénalité, 1 victoire
+    sons/matrix/  13 MP3                            la voix du thème Matrix
+    polices/  ShareTechMono-Regular.woff2 + OFL.txt  police du thème Matrix
     docs/     specifications.md adr.md              la référence qui fait autorité
     docs/archive/                                   ancienne app, référence seule
     JOURNAL.md                                      ce qui a été fait, lot par lot
 
 ## Lancer les tests
 
-    npm test          # 157 tests, doit être au vert avant tout changement de phase
+    npm test          # 160 tests, doit être au vert avant tout changement de phase
     npm run simulate  # contrôle d'équilibre, doit retomber sur le §17 de la spec
 
 Aucune installation. Node 18+ suffit, il n'y a pas de `node_modules`.
@@ -38,8 +40,8 @@ Le script fait les trois contrôles dans l'ordre, et s'arrête au premier qui
    un fichier réellement servi hors ligne a changé — toucher `docs/` ou
    `tests/` n'atteint pas Safari.
 2. **`npm test` au vert.** Un test vérifie que le service worker précache bien
-   tout `js/`, `css/`, les icônes et les 13 sons — un fichier oublié casserait
-   le mode hors ligne en silence.
+   tout `js/`, `css/`, les icônes, les polices et les sons de tous les thèmes.
+   Un fichier oublié casserait le mode hors ligne en silence.
 3. **`git pull --rebase` avant le push**, pour ne pas se faire rejeter par une
    modification faite depuis GitHub sur le web.
 

@@ -88,6 +88,8 @@ Le simulateur doit sortir environ : 65 % de tours valides, 6 % de Z+, 28 % de Z,
 
 Repères actuels à ne pas dégrader : écran de partie hors offre **0 px** de débordement, avec offre **76 px** à 4 joueurs, vide sous Valider **61 px**, aucune cible sous 44 px, aucun contraste sous le seuil.
 
+Le lot 9 a mesuré les trois thèmes le même jour, dans les mêmes conditions, avec la racine forcée à 17 px : hors offre 0 px pour Azulejos et Matrix, 63 px pour Tableau ; pendant une offre à 4 joueurs, 128 px pour Azulejos, 159 px pour Matrix, 263 px pour Tableau. Ces chiffres se comparent entre eux, pas avec ceux du lot 8. **Une mesure de mise en page se refait sur les trois thèmes**, la chasse fixe du thème Matrix n'occupe pas la même place.
+
 **Deux pièges de mesure.** Le bandeau d'installation ne s'affiche que hors écran d'accueil et pèse plus de 200 px : il fausse toute mesure de l'accueil, il faut le neutraliser. Et `-apple-system-body` n'existe que sur WebKit : la taille de texte du système se simule en forçant la taille de la racine.
 
 ---
@@ -101,6 +103,7 @@ Repères actuels à ne pas dégrader : écran de partie hors offre **0 px** de d
 - **Les sons passent par des éléments `<audio>`, jamais par la Web Audio API** : sur iOS, le bouton silence physique coupe la seconde et beaucoup de joueurs jouent en silencieux.
 - **Animations réduites** : une information ne doit jamais dépendre d'un mouvement. Ramener une animation à zéro la fait sauter à son image finale, et le Z devenait invisible.
 - **La taille de texte du système** n'atteint une page web que par `-apple-system-body`, bornée ici entre 16 et 21 px. Voir ADR-8. En dessous de 16, iOS zoome sur les champs.
+- **`position:relative` décroche ce qui est en position fixe.** Pour empiler le décor du thème Matrix, la barre du bas, la feuille de saisie et le flash avaient reçu `position:relative` : la feuille repartait 764 px plus bas et les touches du pavé tombaient à 39 px. Sur un élément déjà fixe, ne toucher qu'au `z-index`.
 - **Toute animation est non bloquante.** Une partie compte environ 105 tours : une seconde et demie bloquante en fin de tour, c'est trois minutes d'attente par partie.
 
 ---
@@ -110,6 +113,7 @@ Repères actuels à ne pas dégrader : écran de partie hors offre **0 px** de d
 - **Le barème maison** : suite 1-2-3-4-5 vaut **500**, suite 2-3-4-5-6 vaut **750**. Cela diverge des barèmes français courants, qui donnent 1 500 aux deux. C'est voulu, et verrouillé par `tests/bareme.test.js`.
 - **Pas de bouton « Repartir de zéro ».** Décidé au lot 3 sur un calcul de gestes : la reprise est proposée dans 65 % des tours et acceptée dans 18 %, donc le bouton ne servait qu'à dire non environ 47 fois par partie. Marquer un score vaut refus, et le refus est bien inscrit dans l'historique.
 - **Aucun paramètre de règle dans les réglages.** Ni barème, ni plancher, ni pénalité, ni reprise. Un réglage qui les modifie transforme chaque partie en négociation.
+- **Un thème peut changer la police, les sons et le décor**, aux trois conditions de l'**ADR-9** : police embarquée avec sa licence dans `polices/`, un manifeste de sons par thème dans `js/sounds.js` avec tous les thèmes au précache, et un décor qui ne porte jamais d'information et ne s'anime pas pendant une partie.
 - **Les trois arbitrages par défaut du §1** : chaînage de la reprise autorisé, compteur punitif remis à 0 après pénalité, égalité parfaite au profit du déclencheur.
 
 ---

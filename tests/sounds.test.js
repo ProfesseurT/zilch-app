@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createGame, apply } from '../js/engine.js';
-import { createPicker, allFiles, SOUND_MANIFEST, SoundError, choisirSon, PRIORITE } from '../js/sounds.js';
+import { createPicker, allFiles, SOUND_MANIFEST, SoundError, choisirSon, PRIORITE, manifestePour } from '../js/sounds.js';
 
 test('un son tire appartient bien au pool de son evenement', () => {
   const p = createPicker();
@@ -60,11 +60,35 @@ test('la repartition reste equilibree', () => {
   }
 });
 
-test('la liste des fichiers a precacher couvre tout le manifeste', () => {
+test('la liste des fichiers a precacher couvre TOUS les themes', () => {
+  // Sans argument, allFiles doit renvoyer les sons de tous les themes : un
+  // theme change en mode avion doit sonner. Un oubli ici est un silence
+  // qui n'apparait que hors ligne, donc jamais pendant les tests manuels.
   const f = allFiles();
-  assert.equal(f.length, 13);
   assert.equal(new Set(f).size, f.length, 'aucun doublon');
   assert.ok(f.includes('victoire.mp3'));
+  assert.ok(f.includes('matrix/victoire.mp3'));
+  assert.equal(f.length, 26, '13 sons par voix, deux voix distinctes');
+});
+
+test('chaque theme a sa voix, et chaque voix est complete', () => {
+  for (const theme of ['azulejo', 'tableau', 'matrix']) {
+    const m = manifestePour(theme);
+    for (const e of PRIORITE) {
+      assert.ok(Array.isArray(m[e]) && m[e].length, `${theme} : ${e} sans son`);
+    }
+    assert.equal(allFiles(m).length, 13, `${theme} : 13 fichiers attendus`);
+  }
+  // Un theme inconnu ne rend jamais l'application muette.
+  assert.equal(manifestePour('inexistant'), SOUND_MANIFEST);
+  assert.notEqual(manifestePour('matrix'), SOUND_MANIFEST, 'matrix a bien sa propre voix');
+});
+
+test('le tireur suit le manifeste qu on lui donne', () => {
+  const p = createPicker(manifestePour('matrix'));
+  for (let i = 0; i < 100; i++) {
+    assert.match(p.pick('Z'), /^matrix\//, 'un theme ne doit jamais emprunter la voix d un autre');
+  }
 });
 
 // --- Un tour = un son ------------------------------------------------------

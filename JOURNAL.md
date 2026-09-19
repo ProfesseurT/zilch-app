@@ -14,6 +14,43 @@
 
 ---
 
+## Lot 9 — 2026-09-19 · à pousser
+
+**Un troisième thème, qui change aussi ce qu'on entend et ce qu'on voit derrière.**
+
+Mesures faites dans un navigateur piloté, viewport 375 x 812, encoches de 50 px en haut et 34 en bas, racine forcée à 17 px, bandeau d'installation neutralisé, partie réelle jouée à 4 joueurs. Le protocole n'est pas strictement celui du lot 8 : il mesure les trois thèmes dans les mêmes conditions, le même jour, ce qui rend les colonnes comparables entre elles mais pas avec les chiffres du lot 8.
+
+| Point mesuré | Azulejos | Tableau | Matrix |
+|---|---|---|---|
+| Écran de partie hors offre, débordement | 0 px | 63 px | 0 px |
+| Écran de partie pendant une offre, 4 joueurs | 128 px | 263 px | 159 px |
+| Vide sous le bouton Valider | 61 px | 61 px | 61 px |
+| Cibles tactiles sous 44 px | 0 | 0 | 0 |
+| Boutons interceptés par un autre élément | 0 | 0 | 0 |
+| Texte coupé | 0 | 0 | 0 |
+
+Ce qui a changé :
+
+- Un thème **Matrix** : vert phosphore sur noir, angles vifs, halo sur les grands chiffres, police à chasse fixe embarquée. Contrastes calculés avant écriture, le plus bas est à 5,98:1 pour le texte secondaire sur les cartes, le seuil étant 4,5.
+- **Une police dans le dépôt**, Share Tech Mono sous licence SIL Open Font License 1.1, 16,5 ko en woff2, avec sa licence à côté. Aucun appel distant, le hors ligne reste entier.
+- **Une voix par thème.** `js/sounds.js` porte maintenant un manifeste par thème, et le thème Matrix a ses treize sons dans `sons/matrix/`, fabriqués par synthèse. Le tireur de sons est recréé au changement de thème : ce qu'on entend change dès le tour suivant.
+- **Une pluie de caractères** dans un canvas séparé, `js/pluie.js`, derrière tout le contenu et avec les taps neutralisés. Elle ne tourne que sur l'accueil et pendant un flash, et s'efface partout ailleurs. Voir **ADR-9**.
+- Le service worker précache les sons de **tous** les thèmes et la police. Un thème changé en mode avion doit sonner, et un oubli ici serait un silence invisible tant qu'il y a du réseau.
+
+Trois corrections trouvées par la mesure, pas à l'œil :
+
+- Le canvas avait d'abord été empilé en passant `position:relative` sur la barre du bas, la feuille de saisie et le flash, qui sont en position fixe. La feuille de saisie repartait alors 764 px plus bas et les touches du pavé tombaient à 39 px, sous le seuil de 44. Seuls les écrans ont besoin d'un contexte d'empilement.
+- Le grand total du joueur actif à 3 rem et les lignes de score à 10 px de marge poussaient 186 px de tableau sous le pli. Ramenés à 2,5 rem et 7 px : 159 px.
+- Les cinq libellés de la barre du bas se touchaient en chasse fixe. Interlettrage ramené de 0,1 à 0,02 em, taille à 10 px.
+
+160 tests au vert, trois ajoutés : la couverture du précache par tous les thèmes, l'intégrité de chaque voix, et la présence sur le disque de toute police appelée par la feuille de style. Le §17 retombe juste : 65,2 % de tours valides, 6,4 % de Z+, 105 tours par partie, 4,8 pénalités.
+
+**Écarté volontairement.** Une pluie permanente sur tous les écrans, pour la batterie du téléphone qui tient la partie. Une police du système à la place d'une police embarquée, qui aurait vidé le thème de son effet. Des sons téléchargés d'une banque libre, pour ne pas avoir à vérifier une licence par fichier.
+
+**Reste ouvert.** Les sons Matrix sont de la synthèse, pas des enregistrements maison : c'est un écart au §14, assumé dans l'ADR-9, et il ne concerne que ce thème. Sur l'écran de partie pendant une offre à 4 joueurs, Matrix déborde 31 px de plus qu'Azulejos : c'est de l'information de référence, jamais une action, et c'est nettement moins que le thème Tableau.
+
+---
+
 ## Lot 8 — 2026-09-18 · `6ac1230`
 
 **L'écran tient dans la main, et le texte suit le réglage du téléphone.**
