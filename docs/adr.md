@@ -446,6 +446,26 @@ Le manifeste garde un seul jeu d'icônes, celui du thème par défaut. Android n
 
 Deux fichiers de plus au précache, 6 ko. Coût de réouverture faible : supprimer la table `ICONE_SYSTEME` et le test suffit.
 
+# ADR-12 : Effacer une partie, sans corbeille
+
+## Contexte
+
+Une partie interrompue doit parfois etre terminee de force. Elle designe alors un vainqueur qui n'a pas gagne, et ce faux resultat compte dans les statistiques de tout le monde.
+
+## Décision
+
+L'écran Historique peut effacer une partie, définitivement, en deux gestes : le premier annonce ce qui disparaît, le second efface. Pas de corbeille, pas d'annulation.
+
+## Analyse
+
+Une corbeille demanderait un état de plus dans le magasin, un écran pour la vider, et une règle pour les parties à moitié présentes dans les statistiques. Le coût dépasse le besoin : la sauvegarde existe déjà, elle s'appelle Exporter.
+
+La partie en cours est protégée. L'arrêter d'abord, sinon l'écran de jeu pointerait vers une partie disparue.
+
+## Conséquences
+
+Un geste irréversible de plus dans l'application, après la suppression d'un joueur. Même forme, même avertissement chiffré avant d'agir. Coût de réouverture faible.
+
 ## Ce qui reste ouvert
 
 | Point | Valeur par défaut appliquée | À trancher par |

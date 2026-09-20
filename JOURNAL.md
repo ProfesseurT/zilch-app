@@ -14,6 +14,33 @@
 
 ---
 
+## Lot 14 — 2026-09-20 · à pousser
+
+**Une partie terminée de force pouvait donner une victoire à quelqu'un qui n'a pas gagné.**
+
+- L'écran Historique propose d'effacer une partie. Deux gestes : le premier annonce ce qui disparaît, le second efface.
+- `store.deleteGame` refuse la partie en cours. L'arrêter d'abord, sinon l'écran de jeu pointerait vers une partie disparue.
+- Les statistiques ne sont pas recalculées à la main : elles n'ont jamais été stockées, elles se refont depuis les parties restantes.
+- `tests/suppression-partie.test.js` : la partie en cours est protégée, et les chiffres tombent bien de ce que la partie effacée apportait.
+
+**Ce qui n'a pas été fait.** Aucune corbeille, aucun retour en arrière. Un export avant de faire le ménage reste la seule sauvegarde.
+
+---
+
+## Lot 13 — 2026-09-20 · `3fd06be`
+
+**Une icône par thème, et la limite d'iOS écrite noir sur blanc.**
+
+Entrée écrite après coup : le script du lot précédent l'avait sautée sans le dire, son garde-fou voyant un « Lot 11 » déjà présent dans ce fichier. Le commit porte donc le numéro 11, le journal le numéro 13. Signalé plutôt que réécrit.
+
+- Azulejos sur fond crème, Tableau en Z noir sur orange, Matrix en Z phosphore sur pluie de caractères. Tracées en vecteur, aucune police, aucun fichier extérieur, 18 ko pour les six fichiers après réduction de palette.
+- `poserTheme` échange le lien `apple-touch-icon` en même temps que la couleur de barre d'état.
+- `tests/icones.test.js` : un thème ajouté sans icône échoue au test.
+
+**Reste à mesurer.** iOS fige l'icône à l'ajout à l'écran d'accueil. Que Safari lise bien le lien posé par le script, et non celui écrit dans la page, n'est documenté nulle part chez Apple. À vérifier sur un vrai iPhone : thème Matrix, ajouter à l'écran d'accueil, regarder l'icône obtenue.
+
+---
+
 ## Lot 12 — 2026-09-19 · à pousser
 
 **On monte la table sans quitter l'écran.**

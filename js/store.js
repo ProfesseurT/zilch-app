@@ -166,6 +166,22 @@ export function abandonGame(store, gameId) {
   return { ...store, games: store.games.map((g) => (g.id === gameId ? updated : g)) };
 }
 
+/**
+ * Efface definitivement une partie.
+ *
+ * Rien d'autre n'est touche : les statistiques ne sont jamais stockees, elles
+ * sont recalculees depuis les parties restantes, donc elles suivent toutes
+ * seules. Une partie en cours n'est pas effacable : on l'arrete d'abord, sinon
+ * l'ecran de jeu continuerait de pointer vers une partie disparue.
+ */
+export function deleteGame(store, gameId) {
+  const g = getGame(store, gameId);
+  if (g.status === 'IN_PROGRESS' || g.status === 'FINAL_ROUND') {
+    throw new StoreError('La partie est en cours. Arrete-la avant de l effacer.');
+  }
+  return { ...store, games: store.games.filter((x) => x.id !== gameId) };
+}
+
 /** La partie en cours, s'il y en a une. Il ne peut y en avoir qu'une. */
 export function currentGame(store) {
   return store.games.find((g) => g.status === 'IN_PROGRESS' || g.status === 'FINAL_ROUND') ?? null;

@@ -1000,6 +1000,47 @@ function montrerVainqueur(g, etat) {
 
 // --- Historique -------------------------------------------------------------
 
+/**
+ * Effacer une partie, en deux gestes.
+ *
+ * Une partie interrompue et terminee de force fausse tout le monde : elle
+ * donne une victoire a quelqu'un qui n'a pas gagne. L'effacer est le seul
+ * recours, et c'est irreversible, donc le premier tap ne fait qu'annoncer ce
+ * qui va disparaitre.
+ */
+function monterSuppression(pied, g, classement) {
+  const noms = classement.map((p) => p.name);
+  const gagnant = g.status === 'FINISHED' ? classement[0].name : null;
+  const consequence = `Effacée, cette partie ne compte plus pour personne : `
+    + `${noms.length} joueur${noms.length > 1 ? 's' : ''} perdent ses tours, ses Z et ses Z+`
+    + `${gagnant ? `, et ${gagnant} perd une victoire` : ''}. C'est définitif.`;
+
+  const repos = () => {
+    pied.innerHTML = '';
+    const b = el('<button class="discret espace">Supprimer cette partie</button>');
+    b.onclick = confirmer;
+    pied.append(b);
+  };
+  const confirmer = () => {
+    pied.innerHTML = '';
+    pied.append(el(`<p class="legende espace">${esc(consequence)}</p>`));
+    const oui = el('<button class="danger">Effacer définitivement</button>');
+    const non = el('<button class="discret espace">Annuler</button>');
+    oui.onclick = async () => {
+      oui.disabled = true;
+      const etatDisque = S;
+      try { S = store.deleteGame(S, g.id); } catch (err) { dire('m-donnees', err.message, 'ko'); return; }
+      if (!(await sauver(etatDisque))) return;
+      rendreHistorique();
+      rendreAccueil();
+      dire('m-donnees', 'Partie effacée. Les statistiques sont recalculées.', 'ok');
+    };
+    non.onclick = repos;
+    pied.append(oui, non);
+  };
+  repos();
+}
+
 function rendreHistorique() {
   const root = $('liste-parties');
   const finies = S.games.filter((g) => g.status === 'FINISHED' || g.status === 'ABANDONED').slice().reverse();
@@ -1011,13 +1052,16 @@ function rendreHistorique() {
   for (const g of finies) {
     const etat = store.replayGame(S, g);
     const classement = etat.players.slice().sort((a, b) => etat.scores[b.id] - etat.scores[a.id]);
-    root.append(el(`<div class="carte serree">
+    const carte = el(`<div class="carte serree">
       <div class="ligne"><span class="nom">${g.status === 'ABANDONED' ? 'Partie arrêtée' : '🏆 ' + esc(classement[0].name)}</span>
         <span class="meta">${quand(g.finishedAt || g.createdAt)}</span></div>
       ${g.location ? `<p class="legende">${esc(g.location)}</p>` : ''}
       <div class="tableau">${classement.map((p) => `<div class="ligne"><span class="nom">${esc(p.name)}</span><span class="pts">${nb(etat.scores[p.id])}</span></div>`).join('')}</div>
       <p class="legende espace">${g.events.filter((e) => e.type === 'Z').length} Z · ${g.events.filter((e) => e.type === 'Z_PLUS').length} Z+ · ${g.events.length} événements</p>
-    </div>`));
+      <div class="pied"></div>
+    </div>`);
+    monterSuppression(carte.querySelector('.pied'), g, classement);
+    root.append(carte);
   }
 }
 
