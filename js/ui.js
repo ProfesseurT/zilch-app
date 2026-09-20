@@ -25,6 +25,15 @@ const THEMES = [
 
 // Couleur de la barre d'etat d'iOS, par theme.
 const TEINTE_SYSTEME = { azulejo: '#123A6B', tableau: '#08090A', matrix: '#050A07' };
+// Icone de l'ecran d'accueil, par theme. iOS lit ce lien AU MOMENT de l'ajout
+// a l'ecran d'accueil, puis fige l'icone : changer de theme ensuite ne la
+// change plus, il faut supprimer l'application et la reinstaller.
+const ICONE_SYSTEME = {
+  azulejo: './icon-180.png',
+  tableau: './icon-180-tableau.png',
+  matrix: './icon-180-matrix.png',
+};
+
 const CLE_THEME = 'zilch.theme';
 
 function poserTheme(id) {
@@ -32,6 +41,8 @@ function poserTheme(id) {
   document.documentElement.dataset.theme = choisi;
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', TEINTE_SYSTEME[choisi] ?? TEINTE_SYSTEME.azulejo);
+  const lien = document.querySelector('link[rel="apple-touch-icon"]');
+  if (lien) lien.setAttribute('href', ICONE_SYSTEME[choisi] ?? ICONE_SYSTEME.azulejo);
   try { localStorage.setItem(CLE_THEME, choisi); } catch { /* mode prive */ }
   return choisi;
 }

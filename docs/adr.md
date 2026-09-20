@@ -426,6 +426,26 @@ Le vrai risque n'est pas la durée, c'est le blocage. Un rideau qui ne se lève 
 
 ---
 
+# ADR-11 : L'icône d'accueil suit le thème, dans la limite d'iOS
+
+## Contexte
+
+Trois thèmes, une seule icône. Un utilisateur en thème Matrix installait une tuile cobalt.
+
+## Décision
+
+Un fichier d'icône par thème. `poserTheme` échange le lien `apple-touch-icon`, comme il échange déjà la couleur de la barre d'état. Le HTML continue de déclarer `icon-180.png` en dur, qui reste l'icône du thème par défaut.
+
+## Analyse
+
+iOS fige l'icône à l'ajout à l'écran d'accueil. Le choix ne vaut donc que pour les installations à venir, jamais pour celles déjà faites. Ce n'est pas un défaut de l'application, c'est la plateforme. Aucun texte de l'interface ne laisse croire l'inverse.
+
+Le manifeste garde un seul jeu d'icônes, celui du thème par défaut. Android ne relit pas un manifeste modifié en cours de route, et personne ne joue à ZILCH sur Android.
+
+## Conséquences
+
+Deux fichiers de plus au précache, 6 ko. Coût de réouverture faible : supprimer la table `ICONE_SYSTEME` et le test suffit.
+
 ## Ce qui reste ouvert
 
 | Point | Valeur par défaut appliquée | À trancher par |

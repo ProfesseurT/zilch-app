@@ -5,7 +5,7 @@
 // versionne automatiquement. Sans ce numero, le cache sert indefiniment
 // l'ancienne version : un correctif pousse sur GitHub Pages n'atteint jamais
 // l'iPhone, et rien ne le signale.
-const VERSION = 'zilch-v16';
+const VERSION = 'zilch-v17';
 
 // Tout ce qui doit fonctionner hors ligne. Un fichier ajoute au projet et
 // oublie ici ne sera pas disponible en mode avion — et l'oubli est silencieux.
@@ -24,6 +24,8 @@ const A_PRECACHER = [
   './js/pluie.js',
   './polices/ShareTechMono-Regular.woff2',
   './icon-180.png',
+  './icon-180-tableau.png',
+  './icon-180-matrix.png',
   './icon-192.png',
   './icon-512.png',
   './icon-512-maskable.png',
