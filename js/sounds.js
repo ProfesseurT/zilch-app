@@ -7,32 +7,63 @@
 // Rien d'autre a modifier dans le code.
 // ---------------------------------------------------------------------------
 
-export const SOUND_MANIFEST = {
-  // ~30 fois par partie : c'est ici qu'il faut le plus de variantes.
-  Z: ['z-01.mp3', 'z-02.mp3', 'z-03.mp3', 'z-04.mp3', 'z-05.mp3', 'z-06.mp3'],
-  // ~7 fois par partie.
-  Z_PLUS: ['zplus-01.mp3', 'zplus-02.mp3', 'zplus-03.mp3'],
-  // ~5 fois par partie.
-  PENALTY: ['penalite-01.mp3', 'penalite-02.mp3', 'penalite-03.mp3'],
-  // 1 fois par partie : une seule, volontairement. C'est la signature du jeu.
-  VICTORY: ['victoire.mp3'],
-};
+// Un seul sac. Depuis le lot 17, la voix n'appartient plus au theme : le Z,
+// le Z+ et la penalite tirent tous dans la meme liste, et les quatre themes
+// entendent la meme chose. Seule la victoire garde ses fichiers a elle.
+// Ajouter un son = deposer le fichier dans sons/ et ajouter une ligne ici.
+const POT = [
+  'son-01.mp3',
+  'son-02.mp3',
+  'son-03.mp3',
+  'son-04.mp3',
+  'son-05.mp3',
+  'son-06.mp3',
+  'son-07.mp3',
+  'son-08.mp3',
+  'son-09.mp3',
+  'son-10.mp3',
+  'son-11.mp3',
+  'son-12.mp3',
+  'son-13.mp3',
+  'son-14.mp3',
+  'son-15.mp3',
+  'son-16.mp3',
+  'son-17.mp3',
+  'son-18.mp3',
+  'son-19.mp3',
+  'son-20.mp3',
+  'son-21.mp3',
+  'son-22.mp3',
+  'son-23.mp3',
+  'son-24.mp3',
+  'son-25.mp3',
+  'son-26.mp3',
+  'son-27.mp3',
+  'son-28.mp3',
+  'son-29.mp3',
+  'son-30.mp3',
+  'son-31.mp3',
+  'son-32.mp3',
+  'son-33.mp3',
+  'son-34.mp3',
+  'son-35.mp3',
+  'son-36.mp3',
+  'son-37.mp3',
+  'son-38.mp3',
+];
 
-// Le theme matrix a sa propre voix : memes evenements, memes quantites de
-// variantes, fichiers de synthese ranges dans sons/matrix/. Un theme sans
-// entree ici garde les sons d'origine.
-export const SOUND_MANIFEST_MATRIX = {
-  Z: ['matrix/z-01.mp3', 'matrix/z-02.mp3', 'matrix/z-03.mp3',
-      'matrix/z-04.mp3', 'matrix/z-05.mp3', 'matrix/z-06.mp3'],
-  Z_PLUS: ['matrix/zplus-01.mp3', 'matrix/zplus-02.mp3', 'matrix/zplus-03.mp3'],
-  PENALTY: ['matrix/penalite-01.mp3', 'matrix/penalite-02.mp3', 'matrix/penalite-03.mp3'],
-  VICTORY: ['matrix/victoire.mp3'],
+export const SOUND_MANIFEST = {
+  Z: POT,
+  Z_PLUS: POT,
+  PENALTY: POT,
+  VICTORY: ['victoire-01.mp3', 'victoire-02.mp3'],
 };
 
 export const MANIFESTES = {
   azulejo: SOUND_MANIFEST,
   tableau: SOUND_MANIFEST,
-  matrix: SOUND_MANIFEST_MATRIX,
+  matrix: SOUND_MANIFEST,
+  wordart: SOUND_MANIFEST,
 };
 
 /** Manifeste d'un theme. Un theme inconnu retombe sur les sons d'origine. */

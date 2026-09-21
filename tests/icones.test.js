@@ -22,8 +22,8 @@ const icones = Object.fromEntries(
   [...(bloc?.[1] ?? '').matchAll(/([a-z]+):\s*'([^']+)'/g)].map((m) => [m[1], m[2]]),
 );
 
-test('les trois themes existent toujours', () => {
-  assert.deepEqual(themes, ['azulejo', 'tableau', 'matrix']);
+test('les quatre themes existent toujours', () => {
+  assert.deepEqual(themes, ['azulejo', 'tableau', 'matrix', 'wordart']);
 });
 
 test('chaque theme a son icone, et le fichier existe', () => {

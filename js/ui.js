@@ -21,10 +21,11 @@ const THEMES = [
   { id: 'azulejo', nom: 'Azulejos', teinte: 'linear-gradient(90deg,#1B4D8F 50%,#F5EFE1 50%)' },
   { id: 'tableau', nom: 'Tableau',  teinte: 'linear-gradient(90deg,#08090A 50%,#FF4A17 50%)' },
   { id: 'matrix',  nom: 'Matrix',   teinte: 'linear-gradient(90deg,#050A07 50%,#00FF66 50%)' },
+  { id: 'wordart', nom: 'WordArt',  teinte: 'linear-gradient(90deg,#008080 40%,#FF006E 40%,#FFD600 60%,#0091EA 80%)' },
 ];
 
 // Couleur de la barre d'etat d'iOS, par theme.
-const TEINTE_SYSTEME = { azulejo: '#123A6B', tableau: '#08090A', matrix: '#050A07' };
+const TEINTE_SYSTEME = { azulejo: '#123A6B', tableau: '#08090A', matrix: '#050A07', wordart: '#008080' };
 // Icone de l'ecran d'accueil, par theme. iOS lit ce lien AU MOMENT de l'ajout
 // a l'ecran d'accueil, puis fige l'icone : changer de theme ensuite ne la
 // change plus, il faut supprimer l'application et la reinstaller.
@@ -32,6 +33,7 @@ const ICONE_SYSTEME = {
   azulejo: './icon-180.png',
   tableau: './icon-180-tableau.png',
   matrix: './icon-180-matrix.png',
+  wordart: './icon-180-wordart.png',
 };
 
 const CLE_THEME = 'zilch.theme';
@@ -678,6 +680,12 @@ function rendreDes() {
   }
 }
 
+/** Les cases Z d'un joueur : cochees jusqu'a son compte, vides ensuite. */
+function cases(compte, seuil) {
+  return Array.from({ length: seuil }, (_, i) =>
+    `<span class="zed ${i < compte ? 'coche' : ''}" aria-hidden="true"><span>Z</span></span>`).join('');
+}
+
 function rendrePartie() {
   const g = laPartie();
   if (!g) {
@@ -704,11 +712,15 @@ function rendrePartie() {
   const reste = view.remaining(etat);
   const pun = fini ? 0 : etat.punitive[actif.id];
   const seuil = (etat.config ?? CONFIG).punitiveThreshold;
+  // Des cases Z cochees, pas un decompte de points : c'est ce qui se dit a
+  // table. Le nombre reste dit a voix haute pour les lecteurs d'ecran, qui
+  // ne voient ni la bordure pleine ni le remplissage.
   $('p-punitif').innerHTML = !pun ? '' :
-    Array.from({ length: seuil }, (_, i) =>
-      `<span class="pastille ${i < pun ? 'pleine' : ''}"></span>`).join('') +
-    `<span>${pun} / ${seuil}${pun >= seuil - 1 ? ' — prochain échec : −' + nb((etat.config ?? CONFIG).penalty) : ''}</span>`;
+    cases(pun, seuil) +
+    (pun >= seuil - 1
+      ? `<span>prochain échec : −${nb((etat.config ?? CONFIG).penalty)}</span>` : '');
   $('p-punitif').className = 'punitif' + (pun >= seuil - 1 ? ' chaud' : '');
+  $('p-punitif').setAttribute('aria-label', !pun ? '' : `${pun} Z sur ${seuil}`);
 
   $('p-reste').textContent = fini ? ''
     : etat.status === 'FINAL_ROUND' ? 'dernier tour'
@@ -752,11 +764,12 @@ function rendrePartie() {
   // Le joueur actif est deja affiche en grand juste au-dessus. Le repeter ici
   // coutait une ligne de 50 px sur un ecran ou 191 px manquaient deja, et le
   // §6 demande « son score total » PUIS « les scores des autres joueurs ».
+  const seuilPun = (etat.config ?? CONFIG).punitiveThreshold;
   $('tableau').innerHTML = etat.players.filter((p) => fini || p.id !== actif.id).map((p) => {
     const pun = etat.punitive[p.id];
     return `<div class="ligne">
       <span class="nom">${esc(p.name)}${p.id === etat.trigger ? ' ✦' : ''}
-        ${pun ? `<span class="serie"> ${pun} point${pun > 1 ? 's' : ''} punitif${pun > 1 ? 's' : ''}</span>` : ''}</span>
+        ${pun ? `<span class="serie" aria-label="${pun} Z sur ${seuilPun}">${cases(pun, seuilPun)}</span>` : ''}</span>
       <span class="pts">${nb(etat.scores[p.id])}</span></div>`;
   }).join('');
 

@@ -362,6 +362,8 @@ La barre du bas est exclue parce que sa hauteur est verrouillée par `--nav-h`, 
 
 # ADR-9 : Un thème habille aussi la voix et le décor, pas seulement les couleurs
 
+**Remplacé par l'ADR-14 le 2026-09-21 pour la partie sonore.** Le décor reste vrai : la pluie et le rideau appartiennent toujours au thème Matrix.
+
 **Statut :** Accepté · **Date :** 2026-09-19
 
 ## Contexte
@@ -475,3 +477,49 @@ Un geste irréversible de plus dans l'application, après la suppression d'un jo
 | Égalité parfaite en fin de partie | Le déclencheur gagne | Arbitrage |
 | Fréquence de la pénalité (≈ 5 par partie) | Conservée | La partie test |
 | Forme réelle des données `localStorage` | Migration défensive | Inspection du dépôt |
+
+# ADR-13 : Un thème décoratif ne touche jamais aux chiffres
+
+**Statut :** Accepté · **Date :** 2026-09-21
+
+## Contexte
+
+Le thème « wordart » repose sur un effet de 1997 : un dégradé arc-en-ciel découpé à la forme des lettres. L'effet est obtenu en rendant la couleur du texte transparente et en laissant apparaître un fond derrière elle. Appliqué à un score, il ne reste plus qu'un contour coloré, lu à bout de bras, à quatre autour d'une table, parfois sous une lampe.
+
+## Décision
+
+Dans tout thème, l'effet décoratif ne s'applique qu'au décoratif : la marque, le nom du joueur, le mot du flash, le nom du vainqueur. Le total du joueur actif, les scores du tableau, l'affichage de saisie, les chiffres de statistiques et le barème restent pleins et opaques.
+
+## Analyse
+
+La règle ne tient pas toute seule : elle est facile à enfreindre en ajoutant une ligne de style. `tests/wordart.test.js` lit chaque règle du thème et refuse `background-clip` ou une couleur transparente sur la liste des sélecteurs qui portent un chiffre.
+
+Deuxième effet du même mécanisme, payé une fois : avec une couleur transparente, une ombre portée classique est peinte transparente elle aussi, donc invisible. Les ombres de ce thème passent par un filtre. Un test le vérifie.
+
+## Conséquences
+
+Un thème peut être aussi chargé qu'il veut, la lecture du score ne dépend pas de son goût. Coût de réouverture faible : supprimer le test et la liste de sélecteurs. Coût réel de la réouverture : un score illisible pendant une partie, constaté à table, pas ici.
+
+# ADR-14 : La voix n'appartient plus au thème
+
+**Statut :** Accepté · **Date :** 2026-09-21 · **Remplace :** ADR-9, partie sonore
+
+## Contexte
+
+Quatre thèmes, deux voix. Le thème Matrix avait la sienne, les trois autres partageaient celle d'origine. Le nombre de sons entendus dans une partie dépendait donc du thème choisi, et deux voix de treize fichiers valaient moins, à l'oreille, qu'un seul sac de vingt-six.
+
+## Décision
+
+Un seul sac. Le Z, le Z+ et la pénalité y tirent tous. Les quatre thèmes entendent la même chose. La victoire garde ses fichiers à part : c'est la signature du jeu, elle sonne une fois par partie et ne doit pas pouvoir sortir sur un Z.
+
+## Analyse
+
+Le prix payé est réel : les bips de synthèse du thème Matrix sonnent maintenant sous les azulejos, et l'inverse. En échange, la répétition immédiate, la seule vraiment perceptible autour d'une table, recule avec la taille du sac.
+
+Le prix moins visible : le Z, le Z+ et la pénalité ne se distinguent plus à l'oreille. La pénalité est l'événement le plus grave, cinq fois par partie, et c'était le seul signal qui traversait la table quand personne ne regardait l'écran. Arbitrage de Ted, pris en connaissance de cause.
+
+## Conséquences
+
+Les noms de fichiers ne veulent plus rien dire, volontairement. Ajouter un son : le déposer dans `sons/`, une ligne dans le sac, une ligne dans le précache. Un test refuse tout fichier posé dans `sons/` et jamais joué.
+
+**Coût de réouverture :** faible. Rendre un événement distinct redemande une liste séparée dans le manifeste et rien d'autre.

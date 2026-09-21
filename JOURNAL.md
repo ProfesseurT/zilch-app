@@ -14,7 +14,57 @@
 
 ---
 
-## Lot 14 — 2026-09-20 · à pousser
+## Lot 17 — 2026-09-21 · à pousser
+
+**Un seul sac de sons, tiré au hasard, pour les quatre thèmes.**
+
+- La voix n'appartient plus au thème. Le Z, le Z+ et la pénalité tirent dans la même liste de 38 fichiers. La victoire garde les siens, 2.
+- Les fichiers sont renommés `son-01` et suivants, dans un ordre tiré au hasard : leur nom ne dit plus à quel événement ni à quel thème ils appartenaient. Le dossier `sons/matrix/` disparaît, tout est à plat.
+- `docs/adr.md` ADR-9 disait l'inverse et passe en Remplacé. ADR-14 prend la suite.
+- Le tireur ne rejoue jamais le même fichier deux fois de suite pour un même événement. Avec un sac plus grand, la répétition immédiate devient encore moins probable.
+- `tests/sounds.test.js` ne fige plus aucun nombre de fichiers. Il vérifie des propriétés : tout son déclaré existe sur le disque, tout fichier posé dans `sons/` est joué, et aucun son de victoire ne peut sortir ailleurs.
+- `VERSION` incrémentée.
+
+**Ce qui n'a pas été fait.** Aucune compression. Le poids des sons reste celui d'avant, et le point ouvert du §14 sur l'origine des fichiers reste ouvert.
+
+---
+
+## Lot 16 — 2026-09-21 · à pousser
+
+**Le compteur punitif parle enfin comme la table : trois cases Z, cochées.**
+
+- Les pastilles rondes et le décompte « 2 / 3 » disparaissent. À leur place, trois cases portant la lettre Z, cochées au fur et à mesure. Un Z en coche une, un Z+ en coche deux, puisqu'il compte double.
+- Même changement dans le tableau des scores : les mots « 2 points punitifs » deviennent les mêmes cases, en plus petit. C'est le seul endroit où l'information apparaissait en toutes lettres.
+- Les quatre thèmes sont servis par une seule règle. La case cochée se remplit d'un calque de la couleur du texte à 22 % au lieu d'un aplat : la lettre reste lisible sur n'importe quel fond, sans que le compteur ait à connaître la couleur du bloc.
+- Coché et non coché diffèrent par le trait, plein contre pointillé, pas seulement par la couleur.
+- Les cases sont muettes pour les lecteurs d'écran, qui entendent le compte une seule fois : « 2 Z sur 3 ». Sans cela, ils auraient lu « Z Z Z » sans dire lesquels sont cochés.
+- Tailles en rem et em, pas en pixels : le garde-fou du lot 6 l'a attrapé au premier essai, les cases suivent maintenant le réglage de taille de texte d'iOS.
+- La page Règles suivait l'ancien vocabulaire. Elle dit maintenant « un Z coche une case, un Z+ en coche deux ».
+- `tests/cases-z.test.js` : cinq garde-fous, dont le comptage réel de la fonction prise dans `js/ui.js`, pas recopiée.
+- Tests : 196 au vert, contre 191 au lot 15. `VERSION` passée à `zilch-v20`.
+
+**Ce qui n'a pas été fait.** Aucune décision dans `docs/adr.md` : c'est un changement de vocabulaire d'affichage, pas de structure. Le moteur n'a pas bougé, le compteur est toujours en points.
+
+---
+
+## Lot 15 — 2026-09-21 · à pousser
+
+**Un quatrième thème, WordArt, et la règle qui l'empêche de nuire.**
+
+- Bureau turquoise, panneaux gris en relief, titres arc-en-ciel biseautés. Police Anton embarquée, licence OFL, 18,6 ko mesurés sur le fichier du dépôt.
+- Règle tenue partout : l'arc-en-ciel ne touche que le décoratif. Le total du joueur actif, les scores du tableau, l'affichage de saisie et les chiffres de statistiques restent pleins et opaques. Un dégradé découpé sur un texte en rend la couleur transparente : sur un score, il ne resterait qu'un contour. Décision en `docs/adr.md`, ADR-13.
+- Contrastes mesurés avant écriture, seuil 4,5:1 : noir sur panneau 11,54, blanc sur bleu 16,01, jaune du total sur bleu 11,41, bleu des scores sur panneau 8,80. Deux couleurs tombaient sous le seuil en texte, le rouge à 3,24 et le vert à 4,44 : deux variantes réservées au texte ont été ajoutées, 5,03 et 5,83.
+- Aucune animation ajoutée. Le relief et le biseau sont des ombres empilées, peintes une fois. 105 tours par partie, rien de plus à faire tourner.
+- Pas de voix dédiée. Le thème reprend les sons d'origine, comme le thème tableau. Treize fichiers de plus auraient pesé 1,9 Mo au précache, et la question des sons du §14 reste ouverte.
+- `tests/wordart.test.js` : sept garde-fous, dont l'interdiction du dégradé sur un chiffre et le calcul de contraste relu depuis le CSS.
+- Précache : deux fichiers de plus, la police 18,6 ko et l'icône 1,3 ko. `VERSION` passée à `zilch-v19`.
+- Tests : 191 au vert, contre 184 avant le lot. `node tests/simulate.js` inchangé, 65,3 % de tours valides, 6,3 % de Z+, 106 tours par partie, 4,9 pénalités.
+
+**Ce qui n'a pas été fait.** Aucune mesure au navigateur piloté. Le protocole du lot 8 n'a pas été rejoué : le thème ne touche à aucune hauteur ni à aucun espacement de structure, mais les titres sont plus grands, donc la vérification reste due sur l'iPhone.
+
+---
+
+## Lot 14 — 2026-09-20 · `1fefef4`
 
 **Une partie terminée de force pouvait donner une victoire à quelqu'un qui n'a pas gagné.**
 

@@ -1,7 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readdirSync, existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { createGame, apply } from '../js/engine.js';
 import { createPicker, allFiles, SOUND_MANIFEST, SoundError, choisirSon, PRIORITE, manifestePour } from '../js/sounds.js';
+
+const racine = fileURLToPath(new URL('../', import.meta.url));
 
 test('un son tire appartient bien au pool de son evenement', () => {
   const p = createPicker();
@@ -21,9 +25,9 @@ test('jamais deux fois le meme son de suite pour un meme evenement', () => {
 });
 
 test('un pool d un seul son renvoie toujours ce son', () => {
-  const p = createPicker();
-  assert.equal(p.pick('VICTORY'), 'victoire.mp3');
-  assert.equal(p.pick('VICTORY'), 'victoire.mp3');
+  const p = createPicker({ VICTORY: ['seul.mp3'] });
+  assert.equal(p.pick('VICTORY'), 'seul.mp3');
+  assert.equal(p.pick('VICTORY'), 'seul.mp3');
 });
 
 test('les evenements ne se genent pas entre eux', () => {
@@ -43,18 +47,20 @@ test('un evenement sans son declare leve une erreur claire', () => {
 test('tout le pool finit par sortir', () => {
   const p = createPicker();
   const vus = new Set();
-  for (let i = 0; i < 400; i++) vus.add(p.pick('Z'));
+  const tirages = SOUND_MANIFEST.Z.length * 60;
+  for (let i = 0; i < tirages; i++) vus.add(p.pick('Z'));
   assert.equal(vus.size, SOUND_MANIFEST.Z.length, 'tous les sons doivent etre joues');
 });
 
 test('la repartition reste equilibree', () => {
   const p = createPicker();
   const n = {};
-  for (let i = 0; i < 12000; i++) {
+  const tirages = SOUND_MANIFEST.Z.length * 500;
+  for (let i = 0; i < tirages; i++) {
     const s = p.pick('Z');
     n[s] = (n[s] || 0) + 1;
   }
-  const attendu = 12000 / SOUND_MANIFEST.Z.length;
+  const attendu = tirages / SOUND_MANIFEST.Z.length;
   for (const v of Object.values(n)) {
     assert.ok(Math.abs(v - attendu) < attendu * 0.15, `repartition trop desequilibree : ${v}`);
   }
@@ -66,28 +72,35 @@ test('la liste des fichiers a precacher couvre TOUS les themes', () => {
   // qui n'apparait que hors ligne, donc jamais pendant les tests manuels.
   const f = allFiles();
   assert.equal(new Set(f).size, f.length, 'aucun doublon');
-  assert.ok(f.includes('victoire.mp3'));
-  assert.ok(f.includes('matrix/victoire.mp3'));
-  assert.equal(f.length, 26, '13 sons par voix, deux voix distinctes');
-});
-
-test('chaque theme a sa voix, et chaque voix est complete', () => {
-  for (const theme of ['azulejo', 'tableau', 'matrix']) {
-    const m = manifestePour(theme);
-    for (const e of PRIORITE) {
-      assert.ok(Array.isArray(m[e]) && m[e].length, `${theme} : ${e} sans son`);
-    }
-    assert.equal(allFiles(m).length, 13, `${theme} : 13 fichiers attendus`);
+  for (const nom of f) {
+    assert.ok(existsSync(racine + 'sons/' + nom), `son declare mais absent du disque : ${nom}`);
   }
-  // Un theme inconnu ne rend jamais l'application muette.
-  assert.equal(manifestePour('inexistant'), SOUND_MANIFEST);
-  assert.notEqual(manifestePour('matrix'), SOUND_MANIFEST, 'matrix a bien sa propre voix');
+  const posees = new Set(readdirSync(racine + 'sons').filter((n) => /\.(mp3|m4a|wav|aac|ogg)$/i.test(n)));
+  for (const nom of posees) {
+    assert.ok(f.includes(nom), `fichier dans sons/ mais jamais joue : ${nom}`);
+  }
 });
 
-test('le tireur suit le manifeste qu on lui donne', () => {
-  const p = createPicker(manifestePour('matrix'));
-  for (let i = 0; i < 100; i++) {
-    assert.match(p.pick('Z'), /^matrix\//, 'un theme ne doit jamais emprunter la voix d un autre');
+test('les quatre themes partagent le meme pot', () => {
+  // Decision du lot 17 : la voix n appartient plus au theme. Ce test
+  // remplace celui qui interdisait a un theme d emprunter la voix d un autre.
+  for (const theme of ['azulejo', 'tableau', 'matrix', 'wordart', 'inexistant']) {
+    assert.equal(manifestePour(theme), SOUND_MANIFEST, `${theme} doit tirer dans le pot commun`);
+  }
+});
+
+test('chaque evenement a de quoi sonner', () => {
+  for (const e of PRIORITE) {
+    assert.ok(Array.isArray(SOUND_MANIFEST[e]) && SOUND_MANIFEST[e].length, `${e} sans son`);
+  }
+});
+
+test('Z, Z+ et penalite tirent dans le meme sac, la victoire non', () => {
+  const pot = new Set(SOUND_MANIFEST.Z);
+  assert.deepEqual(new Set(SOUND_MANIFEST.Z_PLUS), pot, 'le Z+ doit tirer dans le meme sac');
+  assert.deepEqual(new Set(SOUND_MANIFEST.PENALTY), pot, 'la penalite doit tirer dans le meme sac');
+  for (const v of SOUND_MANIFEST.VICTORY) {
+    assert.ok(!pot.has(v), `un son de victoire ne doit jamais sortir ailleurs : ${v}`);
   }
 });
 

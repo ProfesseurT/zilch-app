@@ -315,9 +315,21 @@ table.bareme td:last-child{ text-align:right; font-family:var(--serif); font-wei
 .punitif{ display:flex; align-items:center; justify-content:center; gap:6px;
   margin-top:5px; font-size:0.75rem; letter-spacing:.05em }
 .punitif:empty{ display:none }
-.punitif .pastille{ width:15px; height:15px; border-radius:50%;
-  border:2px solid currentColor; display:inline-block }
-.punitif .pastille.pleine{ background:currentColor }
+/* Trois cases Z, cochees au fur et a mesure. Un Z+ en coche deux, il compte
+   double. Le remplissage passe par un calque a 22 % au lieu d'un aplat :
+   la lettre reste en couleur du texte, donc lisible sur N'IMPORTE quel fond
+   de theme, sans que le compteur ait a connaitre la couleur du bloc. */
+.punitif .zed{ position:relative; display:inline-grid; place-items:center;
+  width:1.85em; height:1.85em; border:2px dashed currentColor; border-radius:5px;
+  font-size:0.6875rem; font-weight:800; line-height:1; opacity:.5 }
+.punitif .zed.coche{ border-style:solid; opacity:1 }
+.punitif .zed::before{ content:''; position:absolute; inset:0; background:currentColor;
+  opacity:0; border-radius:3px }
+.punitif .zed.coche::before{ opacity:.22 }
+.punitif .zed span{ position:relative }
+/* Les memes cases, en petit, dans le tableau des scores. */
+.ligne .serie .zed{ font-size:0.5625rem; border-width:1.5px }
+.ligne .serie{ display:inline-flex; gap:3px; vertical-align:middle }
 .punitif.chaud{ color:var(--or); font-weight:700 }
 [data-theme="tableau"] .actif-bloc .punitif{ justify-content:flex-start }
 
@@ -610,3 +622,219 @@ body:has(#e-partie.actif){ overflow:hidden;
   text-shadow:0 0 6px rgba(0,255,102,.45) }
 #eveil .texte::after{ content:'_'; animation:curseur 1s step-end infinite }
 @keyframes curseur{ 50%{ opacity:0 } }
+
+/* =========================================================================
+   THEME « WORDART » - le kitsch de 1997, assume.
+   Bureau turquoise, panneaux gris en relief, titres arc-en-ciel biseautes,
+   police condensee grasse embarquee (Anton, licence OFL, dans le depot).
+   Regle tenue partout : l'arc-en-ciel ne touche QUE le decoratif. Les
+   chiffres de score, eux, restent pleins et opaques - un degrade sur un
+   total le rend illisible a bout de bras.
+   L'effet de relief est fait d'ombres empilees, donc peint une seule fois :
+   rien ne s'anime, et les 105 tours d'une partie ne coutent rien de plus.
+   Ecart assume au §12, comme « tableau » et « matrix ».
+   ========================================================================= */
+
+/* Chargee uniquement si un element l'utilise. Fichier local : aucune requete
+   distante, hors ligne intact. */
+@font-face{
+  font-family:'Anton';
+  src:url('../polices/Anton-Regular.woff2') format('woff2');
+  font-weight:400; font-style:normal; font-display:swap;
+}
+
+[data-theme="wordart"]{
+  --bureau:#008080; --gris95:#C0C0C0; --gris-clair:#DFDFDF; --gris-ombre:#808080;
+  --navy:#000080; --jaune:#FFD700; --rouge:#CC0000; --vert95:#008000;
+  /* Le rouge et le vert de fond tombent a 3,24:1 et 4,44:1 en TEXTE sur le
+     gris des panneaux. Ces deux variantes ne servent qu au texte. */
+  --rouge-texte:#960000; --vert-texte:#004A00;
+  --titre:'Anton',Impact,'Arial Narrow',sans-serif;
+  --arc:linear-gradient(90deg,#FF006E,#FF8C00,#FFD600,#00C853,#0091EA,#7C00BE);
+  --rayon:0px;
+  /* Relief Windows 95 : clair en haut a gauche, sombre en bas a droite. */
+  --relief:inset -1px -1px 0 #000, inset 1px 1px 0 #FFF,
+           inset -2px -2px 0 var(--gris-ombre), inset 2px 2px 0 var(--gris-clair);
+  --creux:inset 1px 1px 0 #000, inset -1px -1px 0 #FFF,
+          inset 2px 2px 0 var(--gris-ombre), inset -2px -2px 0 var(--gris-clair);
+  --ombre:none;
+  --cobalt:var(--navy); --cobalt-fonce:var(--navy); --cobalt-clair:var(--gris-ombre);
+  --creme:var(--bureau); --creme-ombre:var(--gris-ombre); --blanc:var(--gris95);
+  --or:var(--jaune); --terre:var(--rouge); --vert:var(--vert95);
+  --encre:#000; --gris:#3A3A3A; --bord-discret:var(--gris-ombre);
+  --or-nav:var(--jaune);
+}
+
+/* Bureau turquoise et sa trame de losanges. SVG inline : hors ligne intact. */
+[data-theme="wordart"] body{
+  background-color:var(--bureau);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Cg fill='none' stroke='%23FFFFFF' stroke-width='1' opacity='.13'%3E%3Cpath d='M16 4L28 16L16 28L4 16Z'/%3E%3C/g%3E%3C/svg%3E");
+  background-attachment:fixed;
+  color:#000;
+}
+
+/* Le mot ZILCH en arc-en-ciel biseaute. drop-shadow, PAS text-shadow :
+   avec background-clip:text la couleur du texte est transparente, et une
+   text-shadow serait peinte transparente elle aussi, donc invisible. */
+[data-theme="wordart"] .marque{
+  font-family:var(--titre); font-size:3rem; letter-spacing:.06em; font-weight:400;
+  text-transform:uppercase; color:transparent;
+  background:var(--arc); -webkit-background-clip:text; background-clip:text;
+  -webkit-text-stroke:2px #000;
+  filter:drop-shadow(3px 3px 0 #000) drop-shadow(5px 5px 0 rgba(0,0,0,.35));
+  margin:10px 0 16px;
+}
+[data-theme="wordart"] .marque span{
+  font-family:var(--sans); font-weight:700; color:#FFF; background:none;
+  -webkit-text-stroke:0; filter:none; text-shadow:1px 1px 0 #000;
+  letter-spacing:.2em; margin-top:8px;
+}
+
+/* Panneaux gris en relief, angles vifs. */
+[data-theme="wordart"] .carte{
+  background:var(--gris95); border:0; border-radius:0;
+  box-shadow:var(--relief); padding:16px;
+}
+[data-theme="wordart"] h2{
+  font-family:var(--titre); font-weight:400; font-size:1.375rem; letter-spacing:.02em;
+  text-transform:uppercase; color:#FFF; background:var(--navy);
+  margin:-16px -16px 12px; padding:6px 10px;
+}
+[data-theme="wordart"] .carte.serree h2{ margin:-12px -12px 10px }
+[data-theme="wordart"] .legende{ color:#000; font-weight:700; letter-spacing:.12em }
+
+/* --- Boutons ------------------------------------------------------------ */
+
+[data-theme="wordart"] button{
+  background:var(--gris95); color:#000; border:0; border-radius:0;
+  box-shadow:var(--relief); font-weight:700;
+}
+[data-theme="wordart"] button:active{ transform:none; box-shadow:var(--creux) }
+[data-theme="wordart"] button:disabled{ color:var(--gris-ombre); text-shadow:1px 1px 0 #FFF }
+[data-theme="wordart"] button.plein{ background:var(--navy); color:#FFF }
+[data-theme="wordart"] button.or{ background:var(--jaune); color:#000 }
+[data-theme="wordart"] button.terre,
+[data-theme="wordart"] button.danger{ background:var(--rouge); color:#FFF }
+[data-theme="wordart"] button.discret{ background:var(--gris95); color:#000; font-weight:600 }
+[data-theme="wordart"] button.geant{
+  font-family:var(--titre); font-weight:400; font-size:1.5rem; letter-spacing:.06em;
+  text-transform:uppercase;
+}
+
+/* --- Champs : creusés, l'inverse du relief ------------------------------ */
+
+[data-theme="wordart"] input,[data-theme="wordart"] select{
+  background:#FFF; color:#000; border:0; border-radius:0; box-shadow:var(--creux);
+}
+[data-theme="wordart"] input::placeholder{ color:#5A5A5A }
+[data-theme="wordart"] input.geant{ font-family:var(--titre); font-weight:400; letter-spacing:.02em }
+
+/* --- Ecran de partie ---------------------------------------------------- */
+
+[data-theme="wordart"] .actif-bloc{
+  background:var(--navy); color:#FFF; box-shadow:var(--relief);
+}
+[data-theme="wordart"] .actif-bloc .qui{
+  font-family:var(--titre); font-weight:400; font-size:1.875rem;
+  text-transform:uppercase; letter-spacing:.03em; color:#FFF;
+  text-shadow:2px 2px 0 #000;
+}
+/* Chiffre plein, jamais de degrade : c'est la valeur, pas la decoration. */
+[data-theme="wordart"] .actif-bloc .total{
+  font-family:var(--titre); font-weight:400; font-size:2.75rem;
+  color:var(--jaune); text-shadow:2px 2px 0 #000; letter-spacing:.01em;
+}
+[data-theme="wordart"] .actif-bloc .reste{ opacity:1; color:#D6D6E8 }
+[data-theme="wordart"] .actif-bloc.change{ animation:bascule .16s ease-out }
+
+[data-theme="wordart"] .ligne{ border-radius:0; padding:8px 10px }
+[data-theme="wordart"] .ligne.courant{
+  background:var(--navy); color:#FFF; box-shadow:none;
+}
+[data-theme="wordart"] .ligne.courant .pts{ color:var(--jaune) }
+[data-theme="wordart"] .ligne .nom{ font-weight:700 }
+[data-theme="wordart"] .ligne .pts{ font-family:var(--titre); font-weight:400;
+  font-size:1.5rem; color:var(--navy) }
+[data-theme="wordart"] .ligne .serie{ color:var(--rouge-texte); font-weight:700 }
+
+[data-theme="wordart"] .bandeau{ border-radius:0; border:0; box-shadow:var(--relief);
+  background:var(--gris95); color:#000 }
+[data-theme="wordart"] .bandeau.info{ background:var(--gris95); color:#000 }
+[data-theme="wordart"] .bandeau.alerte{ background:#FFE3E3; color:#8A0000 }
+[data-theme="wordart"] .bandeau.final{ background:var(--jaune); color:#000 }
+
+[data-theme="wordart"] .des button{ font-family:var(--titre); font-weight:400; font-size:1.625rem }
+[data-theme="wordart"] .des button[aria-pressed="true"]{ background:var(--navy); color:#FFF;
+  box-shadow:var(--creux) }
+
+/* --- Flash Z / Z+ : le mot en arc-en-ciel, gros et biseaute ------------- */
+
+[data-theme="wordart"] #flash .mot{
+  font-family:var(--titre); font-weight:400; font-size:26vw; letter-spacing:.02em;
+  color:transparent; background:var(--arc);
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-stroke:3px #000;
+  filter:drop-shadow(5px 5px 0 #000) drop-shadow(9px 9px 0 rgba(0,0,0,.4));
+  text-shadow:none;
+}
+[data-theme="wordart"] #flash .nom{
+  color:#FFF; background:none; -webkit-text-stroke:0; filter:none;
+  text-shadow:2px 2px 0 #000; font-family:var(--titre); font-weight:400;
+}
+
+/* --- Navigation : barre des taches -------------------------------------- */
+
+[data-theme="wordart"] nav{ background:var(--gris95); border-top:2px solid #FFF;
+  box-shadow:inset 0 2px 0 var(--gris-clair) }
+[data-theme="wordart"] nav button{ color:#000; font-weight:700; box-shadow:none }
+[data-theme="wordart"] nav button[aria-current="page"]{ color:var(--navy);
+  box-shadow:var(--creux) }
+
+/* --- Divers -------------------------------------------------------------- */
+
+[data-theme="wordart"] .vide{ color:#2A2A2A }
+[data-theme="wordart"] .puce{ border-radius:0; border:0; box-shadow:var(--relief);
+  background:var(--gris95) }
+[data-theme="wordart"] .puce.choisi{ background:var(--jaune) }
+[data-theme="wordart"] .puce .meta{ color:#3A3A3A }
+[data-theme="wordart"] .puce .rang{ font-family:var(--titre); font-weight:400;
+  color:var(--navy); font-size:1.25rem }
+[data-theme="wordart"] .kpi{ border-bottom:1px solid var(--gris-ombre) }
+[data-theme="wordart"] .kpi b{ font-family:var(--titre); font-weight:400;
+  font-size:1.25rem; color:var(--navy) }
+[data-theme="wordart"] .kpi.positif b{ color:var(--vert-texte) }
+[data-theme="wordart"] .kpi.negatif b{ color:var(--rouge-texte) }
+[data-theme="wordart"] .jauge{ border-radius:0; background:#FFF; box-shadow:var(--creux) }
+[data-theme="wordart"] .jauge span{ background:var(--navy) }
+[data-theme="wordart"] .rangs .rang-item{ border-radius:0; border:0;
+  box-shadow:var(--relief); background:var(--gris95) }
+[data-theme="wordart"] .rangs .rang-item.premier{ background:var(--jaune) }
+[data-theme="wordart"] table.bareme td{ border-bottom:1px solid var(--gris-ombre) }
+[data-theme="wordart"] table.bareme td:last-child{ font-family:var(--titre);
+  font-weight:400; font-size:1.125rem; color:var(--navy) }
+[data-theme="wordart"] .msg.ok{ color:var(--vert-texte) }
+[data-theme="wordart"] .msg.ko{ color:var(--rouge-texte) }
+[data-theme="wordart"] .punitif.chaud{ color:var(--jaune) }
+
+[data-theme="wordart"] .modale{ background:rgba(0,0,64,.6) }
+[data-theme="wordart"] .modale .boite{ border-radius:0; border:0;
+  box-shadow:var(--relief); background:var(--gris95) }
+[data-theme="wordart"] .modale .vainqueur{
+  font-family:var(--titre); font-weight:400; font-size:2.625rem;
+  text-transform:uppercase; color:transparent; background:var(--arc);
+  -webkit-background-clip:text; background-clip:text;
+  -webkit-text-stroke:2px #000;
+  filter:drop-shadow(3px 3px 0 #000);
+}
+
+[data-theme="wordart"] .offre{ box-shadow:var(--relief); border:0; background:var(--jaune) }
+[data-theme="wordart"] .offre-texte b{ color:var(--navy) }
+[data-theme="wordart"] .barre-action{ border-top:2px solid #FFF; background:var(--bureau) }
+[data-theme="wordart"] .feuille{ background:var(--bureau) }
+[data-theme="wordart"] .feuille-tete span{ font-family:var(--titre); font-weight:400;
+  color:#FFF; text-shadow:2px 2px 0 #000; font-size:1.625rem }
+[data-theme="wordart"] .f-affichage{ font-family:var(--titre); font-weight:400;
+  background:#FFF; border:0; box-shadow:var(--creux); color:#000; border-radius:0 }
+[data-theme="wordart"] .pave button{ font-family:var(--titre); font-weight:400; font-size:1.75rem }
+[data-theme="wordart"] .pave button.appoint{ font-size:1.25rem; color:var(--navy) }
+[data-theme="wordart"] .themes button[aria-pressed="true"]{ outline-color:var(--navy) }
