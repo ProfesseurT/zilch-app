@@ -28,24 +28,36 @@ Aucune installation. Node 18+ suffit, il n'y a pas de `node_modules`.
 Le dépôt est **`zilch-app`**, distinct de l'ancien `Zilch` qui reste en ligne et
 intact. URL publiée : `https://<utilisateur>.github.io/zilch-app/`
 
-    ./pousser.sh "ce que j'ai changé"
+    git add -A
+    git commit -m "ce que j'ai changé"
+    git pull --rebase
+    git push
 
-Le script fait les trois contrôles dans l'ordre, et s'arrête au premier qui
-échoue — rien n'est envoyé tant que tout n'est pas vert :
+Deux crochets git, dans `.githooks/`, remplacent les contrôles qu'un script
+faisait avant :
 
-1. **`VERSION` en tête de `service-worker.js` a-t-elle changé ?** Sans nouveau
-   numéro, le cache sert indéfiniment l'ancienne version : le correctif
-   n'atteindra jamais l'iPhone, et **rien ne le signalerait**. Le script compare
-   avec ce qui est déjà en ligne et propose d'incrémenter. Il ne l'exige que si
-   un fichier réellement servi hors ligne a changé — toucher `docs/` ou
-   `tests/` n'atteint pas Safari.
-2. **`npm test` au vert.** Un test vérifie que le service worker précache bien
-   tout `js/`, `css/`, les icônes, les polices et les sons de tous les thèmes.
-   Un fichier oublié casserait le mode hors ligne en silence.
-3. **`git pull --rebase` avant le push**, pour ne pas se faire rejeter par une
-   modification faite depuis GitHub sur le web.
+1. **`pre-commit`.** Si un fichier réellement servi hors ligne a changé
+   (`index.html`, `manifest.json`, `service-worker.js`, `js/`, `css/`, `sons/`,
+   `polices/`, `icon-`) et que `VERSION` n'a pas déjà bougé dans le commit, il
+   l'incrémente lui-même dans `service-worker.js`. Sans nouveau numéro, le
+   cache sert indéfiniment l'ancienne version : le correctif n'atteindrait
+   jamais l'iPhone, et **rien ne le signalerait**. Toucher `docs/` ou `tests/`
+   n'atteint pas Safari, donc ne déclenche rien.
+2. **`pre-push`.** Lance `npm test` et refuse l'envoi si un test échoue. Un
+   test vérifie que le service worker précache bien tout `js/`, `css/`, les
+   icônes, les polices et les sons de tous les thèmes. Un fichier oublié
+   casserait le mode hors ligne en silence.
 
-Première fois seulement : `chmod +x pousser.sh`.
+`git pull --rebase` avant `git push` reste manuel, pour ne pas se faire
+rejeter par une modification faite depuis GitHub sur le web.
+
+Première fois seulement, pour activer les crochets :
+
+    git config core.hooksPath .githooks
+
+Après le push, `git verif` interroge le site en ligne et affiche la `VERSION`
+qu'il sert, pour confirmer que la publication a bien eu lieu (GitHub Pages met
+une à deux minutes).
 
 Tous les chemins sont **relatifs** (`./`), jamais absolus : GitHub Pages sert le
 dépôt dans un sous-dossier et ses fichiers sont sensibles à la casse.

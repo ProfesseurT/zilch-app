@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+#
+# ZILCH — crochet pre-push : refuse l'envoi si un test echoue.
+#
+# C'etait le controle 2 de l'ancien pousser.sh, devenu automatique.
+
+set -eu
+cd "$(git rev-parse --show-toplevel)"
+
+if command -v npm >/dev/null 2>&1; then
+  npm test
+else
+  printf '\n[ATTENTION] npm est absent : les tests ne peuvent pas etre verifies. Envoi sans filet.\n\n' >&2
+fi

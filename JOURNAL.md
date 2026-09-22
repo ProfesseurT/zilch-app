@@ -14,6 +14,25 @@
 
 ---
 
+## Lot 20 — 2026-09-22 · à pousser
+
+**`pousser.sh` disparaît, ses contrôles deviennent des crochets git.**
+
+Le script demandait un geste en plus (`./pousser.sh "message"`) qu'un `git commit` ou `git push` fait directement, hors du script, contournait sans le savoir. Voir **ADR-16**.
+
+- `.githooks/pre-commit` (43 lignes, 1616 octets) : si un fichier réellement servi hors ligne (`index.html`, `manifest.json`, `service-worker.js`, `js/`, `css/`, `sons/`, `polices/`, `icon-`) est mis en scène et que `VERSION` n'a pas déjà bougé dans le commit, il l'incrémente lui-même dans `service-worker.js` et le rajoute au commit. Testé à la main : un fichier de `js/` mis en scène fait passer `zilch-v23` en `zilch-v24` ; un fichier de `docs/` seul ne déclenche rien, silencieusement, comme demandé.
+- `.githooks/pre-push` (14 lignes, 372 octets) : lance `npm test`, refuse l'envoi si un test échoue.
+- `git config core.hooksPath .githooks` active les deux, fait une fois sur le Mac de Ted.
+- Un alias git, `git verif`, remplace la dernière étape du script : interroger `https://professeurt.github.io/zilch-app/service-worker.js` et afficher la `VERSION` qu'il sert. Testé : renvoie `zilch-v23`, la version alors en ligne.
+- `pousser.sh` retiré : 202 lignes, 8565 octets en moins dans le dépôt.
+- `CLAUDE.md`, `README.md` et `docs/adr.md` mis à jour pour décrire le nouveau geste de déploiement, du simple `git add` / `git commit` / `git pull --rebase` / `git push`.
+
+205 tests toujours au vert, aucun ajouté ni retiré : ce lot ne touche à aucune règle du jeu.
+
+**Ce qui n'a pas été fait.** Le tirage (`git pull --rebase`) avant le push et la vérification en ligne restent des gestes manuels, plus automatiques comme avec l'ancien script. Voir l'analyse de l'ADR-16 : la confirmation en ligne demande une à deux minutes d'attente, ce qu'un crochet ne peut pas raisonnablement imposer à chaque commit.
+
+---
+
 ## Lot 19 — 2026-09-21 · à pousser
 
 **Un tour sur six ne faisait aucun bruit, depuis le début.**

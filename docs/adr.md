@@ -547,3 +547,37 @@ Le coût : changer la source relance un chargement. Sans le service worker ce se
 La lecture est désormais testée, sur un faux élément. Ce n'est pas un navigateur, mais ça verrouille ce qui a cassé.
 
 **Coût de réouverture :** faible. Revenir à un élément par fichier demanderait de déverrouiller chacun d'eux pendant le geste de l'utilisateur, ce qui est impossible sans les jouer tous.
+
+---
+
+# ADR-16 : Des crochets git plutôt qu'un script de déploiement
+
+**Statut :** Accepté · **Date :** 2026-09-22 · **Remplace :** `pousser.sh`
+
+## Contexte
+
+`pousser.sh` portait trois contrôles avant chaque envoi : incrémenter `VERSION` si un fichier servi hors ligne avait changé, faire passer `npm test`, et tirer avant de pousser. Le script demandait un geste supplémentaire (`./pousser.sh "message"`) que Ted pouvait oublier, et rien n'empêchait un `git commit` ou un `git push` fait directement, hors du script, de contourner les trois contrôles.
+
+## Décision
+
+Deux crochets git, dans `.githooks/`, activés par `git config core.hooksPath .githooks` :
+
+1. **`pre-commit`.** Si un fichier réellement servi hors ligne est mis en scène (`index.html`, `manifest.json`, `service-worker.js`, `js/`, `css/`, `sons/`, `polices/`, `icon-`) et que `VERSION` n'a pas déjà bougé dans le commit, il l'incrémente lui-même dans `service-worker.js`. Silencieux s'il n'a rien à faire.
+2. **`pre-push`.** Lance `npm test`, refuse l'envoi si un test échoue.
+
+Un alias git, `git verif`, interroge le site en ligne après coup et affiche la `VERSION` qu'il sert, pour la vérification finale que faisait `pousser.sh`.
+
+## Analyse
+
+Un crochet ne peut pas être contourné par inadvertance : `git commit` et `git push` le déclenchent quel que soit l'outil utilisé pour les lancer, y compris une interface graphique. Le geste de Ted redevient du git ordinaire, sans script intermédiaire à retenir.
+
+Ce que `pousser.sh` faisait et qu'aucun crochet ne remplace : le tirage (`git pull --rebase`) avant le push, et la confirmation finale que le site en ligne sert bien la nouvelle version. Le premier reste un geste manuel documenté dans le bloc de commandes ; le second devient `git verif`, à lancer à la main après le push plutôt qu'automatiquement à la fin d'un script — GitHub Pages met une à deux minutes à publier, un temps qu'un crochet ne peut pas raisonnablement faire attendre.
+
+## Conséquences
+
+- Plus de script à maintenir ; deux fichiers courts à la place, testables séparément.
+- Le contrôle `VERSION` protège aussi un commit fait par erreur hors de ce flux, ce que `pousser.sh` ne pouvait pas faire.
+- La confirmation en ligne n'est plus automatique : `git verif` doit être lancé à la main. Un oubli laisse Ted sans confirmation, mais ne laisse jamais partir un envoi sans les deux contrôles qui comptent.
+- `core.hooksPath` est une configuration locale, non versionnée : à refaire si le dépôt était un jour cloné ailleurs. Le projet n'a qu'une seule copie qui fait foi, donc ce coût reste théorique.
+
+**Coût de réouverture :** faible. Revenir à un script unique reprendrait la logique des deux crochets dans un seul fichier.

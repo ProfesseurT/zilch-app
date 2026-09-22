@@ -39,7 +39,7 @@ Ne jamais modifier silencieusement une règle pour simplifier le code. Si une co
 **Claude travaille dans ce dossier. Ted ne retape rien.**
 
 - Claude **modifie les fichiers directement ici**. Il ne décrit pas un changement en prose pour que Ted le refasse à la main.
-- **Claude ne pousse jamais.** Ted colle `./pousser.sh` dans son terminal, lui seul.
+- **Claude ne commite ni ne pousse jamais.** Ted colle les commandes git dans son terminal, lui seul. Deux crochets git automatiques font les contrôles à sa place : `pre-commit` (VERSION) et `pre-push` (tests). Voir §4.
 - Si Ted doit lancer quelque chose lui-même, ça lui arrive en **un seul bloc à coller**, commenté, exécutable tel quel.
 - **Reformuler avant d'agir.** Dire ce qu'on a compris, puis faire.
 - **Mesurer avant d'affirmer.** Tout chiffre dit d'où il vient. Une intuition ne vaut rien sans protocole.
@@ -48,14 +48,13 @@ Ne jamais modifier silencieusement une règle pour simplifier le code. Si une co
 - **Pas de jargon.** Expliquer l'effet en deux ou trois mots, jamais la mécanique interne.
 - **Aucun tiret cadratin**, nulle part.
 
-**Avant de rendre la main à Ted, quatre choses, dans cet ordre :**
+**Avant de rendre la main à Ted, trois choses, dans cet ordre :**
 
 1. `npm test` au vert.
-2. `VERSION` incrémentée dans `service-worker.js` si un fichier servi hors ligne a changé.
-3. L'entrée du lot écrite dans `JOURNAL.md`, avec ses mesures.
-4. Une décision structurante, s'il y en a une, écrite dans `docs/adr.md`.
+2. L'entrée du lot écrite dans `JOURNAL.md`, avec ses mesures.
+3. Une décision structurante, s'il y en a une, écrite dans `docs/adr.md`.
 
-Puis donner la commande de `pousser.sh`, rien de plus.
+Puis donner la commande à coller pour committer et pousser, rien de plus. Le crochet `pre-commit` incrémente `VERSION` tout seul si besoin : plus la peine de le vérifier à la main.
 
 ---
 
@@ -67,16 +66,20 @@ La commande à lui donner, toujours celle-ci :
 
 ```
 cd ~/Projets/zilch-app
-./pousser.sh "ce qui a changé"
+git add -A
+git commit -m "ce qui a changé"
+git pull --rebase
+git push
 ```
 
-Le script fait quatre contrôles dans l'ordre et s'arrête au premier qui échoue. Il finit par interroger le site en ligne et annonce **TOUT EST OK**, ou pas :
+Deux crochets git remplacent les contrôles de l'ancien `pousser.sh`, dans `.githooks/`, activés une fois pour toutes par `git config core.hooksPath .githooks` :
 
-1. **`VERSION` en tête de `service-worker.js` a-t-elle changé ?** C'est la seule panne silencieuse du projet : sans nouveau numéro, l'iPhone sert l'ancienne version pour toujours et rien ne le signale. Le script ne l'exige que si un fichier réellement servi hors ligne a bougé. Toucher à `docs/` ou `tests/` n'atteint pas Safari.
-2. **`npm test` au vert.**
-3. **`git pull --rebase`** avant le push.
+1. **`pre-commit`.** Si un fichier réellement servi hors ligne a changé (`index.html`, `manifest.json`, `service-worker.js`, `js/`, `css/`, `sons/`, `polices/`, `icon-`) et que `VERSION` n'a pas déjà bougé dans le commit, il l'incrémente lui-même dans `service-worker.js`. C'est la seule panne silencieuse du projet : sans nouveau numéro, l'iPhone sert l'ancienne version pour toujours et rien ne le signale. Toucher à `docs/` ou `tests/` ne déclenche rien.
+2. **`pre-push`.** Lance `npm test` et refuse l'envoi si un test échoue.
 
-Première fois sur une machine : `chmod +x pousser.sh`.
+`git pull --rebase` avant `git push` reste manuel : sans lui, deux machines suffisent à faire rejeter l'envoi.
+
+Après le push, `git verif` interroge le site en ligne et affiche la `VERSION` qu'il sert — un alias git, pas une commande à retaper. GitHub Pages met une à deux minutes à publier.
 
 Le dépôt n'a **aucune étape de build** et **aucun `node_modules`**. Modules ES natifs servis tels quels. Aucune bibliothèque distante : tout ce qui est chargé depuis un CDN casse le mode hors ligne.
 

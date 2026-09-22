@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+#
+# ZILCH — crochet pre-commit : incremente VERSION dans service-worker.js
+# quand un fichier servi hors ligne est mis en scene et que VERSION n'a pas
+# deja bouge dans ce commit.
+#
+# C'etait le controle 1 de l'ancien pousser.sh, devenu automatique. Sans ce
+# numero, l'iPhone sert l'ancienne version pour toujours et rien ne le
+# signale : c'est la seule panne silencieuse du projet.
+#
+# Ne dit rien s'il n'a rien a faire.
+
+set -eu
+cd "$(git rev-parse --show-toplevel)"
+
+fichiers=$(git diff --cached --name-only)
+
+servis=$(printf '%s\n' "$fichiers" \
+  | grep -E '^(index\.html|manifest\.json|service-worker\.js|js/|css/|sons/|polices/|icon-)' || true)
+
+[ -n "$servis" ] || exit 0
+
+version_stagee=$(git show :service-worker.js 2>/dev/null \
+  | sed -n "s/^const VERSION = '\([^']*\)'.*/\1/p" | head -1)
+version_head=$(git show HEAD:service-worker.js 2>/dev/null \
+  | sed -n "s/^const VERSION = '\([^']*\)'.*/\1/p" | head -1)
+
+# VERSION a deja ete changee a la main dans ce commit : rien a faire.
+[ "$version_stagee" = "$version_head" ] || exit 0
+
+case "$version_stagee" in
+  zilch-v[0-9]*)
+    suivant="zilch-v$(( ${version_stagee#zilch-v} + 1 ))"
+    # -i.bak : la seule forme acceptee a la fois par macOS et Linux.
+    sed -i.bak "s/^const VERSION = '$version_stagee'/const VERSION = '$suivant'/" service-worker.js
+    rm -f service-worker.js.bak
+    git add service-worker.js
+    printf 'VERSION : %s -> %s\n' "$version_stagee" "$suivant"
+    ;;
+  *)
+    printf '[ATTENTION] VERSION ne suit pas le format zilch-vN ("%s") : increment manuel necessaire.\n' "$version_stagee" >&2
+    ;;
+esac
