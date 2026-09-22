@@ -14,6 +14,36 @@
 
 ---
 
+## Lot 19 — 2026-09-21 · à pousser
+
+**Un tour sur six ne faisait aucun bruit, depuis le début.**
+
+- L'application créait un élément `<audio>` par fichier, 26 au total, et n'en déverrouillait qu'un seul, le premier. iOS attache l'autorisation de lecture à l'élément, pas à l'application : les vingt-cinq autres ne pouvaient pas jouer. Seul `z-01` sortait, soit un Z sur six.
+- Invisible depuis un ordinateur, où tout joue sans rien demander. Invisible aussi pour les tests, qui ne couvraient pas la lecture : le fichier disait « aucune logique ici, uniquement du branchement ».
+- Désormais un seul élément, réutilisé pour tous les sons. Le canal unique devient gratuit, il n'y a plus qu'une voix possible, et la limite d'éléments audio d'iOS ne peut plus être atteinte.
+- Le déverrouillage ne dépend plus d'aucun fichier : 0,02 seconde de silence écrite dans la page, 204 octets. Il ne peut plus échouer faute de réseau.
+- Changer la source ne télécharge rien : le service worker a déjà tous les sons.
+- `tests/lecture-sons.test.js` : huit garde-fous sur un faux élément audio. Un seul élément créé quels que soient les sons, le déverrouillage porte sur celui qui jouera, et un refus du navigateur n'interrompt pas la partie.
+- `VERSION` incrémentée.
+
+**Ce qui n'a pas été fait.** Rien ne mesure le taux de réussite réel sur l'appareil. La preuve reste une partie jouée sur l'iPhone.
+
+---
+
+## Lot 18 — 2026-09-21 · à pousser
+
+**Les sons pesaient dix fois leur poids utile.**
+
+- 40 fichiers convertis en AAC 48 kbit/s mono, avec `afconvert`, livré avec macOS. Mesure avant et après, sur les fichiers du dépôt : 2688 ko puis 1001 ko.
+- Le contenu ne change pas, seul l'encodage. Les treize sons d'origine étaient en 128 kbit/s stéréo pour des effets de cinq secondes joués sur le haut-parleur d'un téléphone.
+- Extension `.m4a`. Safari lit l'AAC dans un élément `<audio>` comme il lit le mp3, et c'est toujours un élément `<audio>`, jamais la Web Audio API, que le bouton silence de l'iPhone coupe.
+- Le sac et le précache ne changent que d'extension. Un contrôle vérifie que chaque son déclaré existe bien sur le disque avant d'écrire quoi que ce soit.
+- `VERSION` incrémentée.
+
+**Ce qui n'a pas été fait.** Aucune égalisation de volume. Les fichiers viennent de sources différentes et n'ont pas le même niveau : ça s'entend plus qu'un débit bas, mais `afconvert` ne sait pas le corriger et rien d'autre n'est installé sur la machine.
+
+---
+
 ## Lot 17 — 2026-09-21 · à pousser
 
 **Un seul sac de sons, tiré au hasard, pour les quatre thèmes.**

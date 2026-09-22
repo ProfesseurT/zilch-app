@@ -523,3 +523,27 @@ Le prix moins visible : le Z, le Z+ et la pénalité ne se distinguent plus à l
 Les noms de fichiers ne veulent plus rien dire, volontairement. Ajouter un son : le déposer dans `sons/`, une ligne dans le sac, une ligne dans le précache. Un test refuse tout fichier posé dans `sons/` et jamais joué.
 
 **Coût de réouverture :** faible. Rendre un événement distinct redemande une liste séparée dans le manifeste et rien d'autre.
+
+# ADR-15 : Un seul élément audio pour toute l'application
+
+**Statut :** Accepté · **Date :** 2026-09-21
+
+## Contexte
+
+Le son manquait par intermittence sur l'iPhone, sans erreur, sans trace. L'application préchargeait un élément `<audio>` par fichier et n'en déverrouillait qu'un au premier tap. Sur iOS, l'autorisation de lecture appartient à l'élément : les autres étaient muets pour toujours.
+
+## Décision
+
+Un seul élément `<audio>`, créé au démarrage, déverrouillé au premier tap, et réutilisé pour tous les sons en changeant sa source.
+
+## Analyse
+
+Trois problèmes tombent ensemble. Le déverrouillage porte forcément sur l'élément qui jouera. La limite d'éléments audio d'iOS devient hors d'atteinte, ce qui comptait avec un sac de quarante sons. Et le canal unique, qui demandait une garde explicite, devient une propriété de la structure : une seule voix est physiquement possible.
+
+Le coût : changer la source relance un chargement. Sans le service worker ce serait un défaut ; avec lui, les fichiers sont déjà là.
+
+## Conséquences
+
+La lecture est désormais testée, sur un faux élément. Ce n'est pas un navigateur, mais ça verrouille ce qui a cassé.
+
+**Coût de réouverture :** faible. Revenir à un élément par fichier demanderait de déverrouiller chacun d'eux pendant le geste de l'utilisateur, ce qui est impossible sans les jouer tous.

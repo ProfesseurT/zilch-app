@@ -12,51 +12,51 @@
 // entendent la meme chose. Seule la victoire garde ses fichiers a elle.
 // Ajouter un son = deposer le fichier dans sons/ et ajouter une ligne ici.
 const POT = [
-  'son-01.mp3',
-  'son-02.mp3',
-  'son-03.mp3',
-  'son-04.mp3',
-  'son-05.mp3',
-  'son-06.mp3',
-  'son-07.mp3',
-  'son-08.mp3',
-  'son-09.mp3',
-  'son-10.mp3',
-  'son-11.mp3',
-  'son-12.mp3',
-  'son-13.mp3',
-  'son-14.mp3',
-  'son-15.mp3',
-  'son-16.mp3',
-  'son-17.mp3',
-  'son-18.mp3',
-  'son-19.mp3',
-  'son-20.mp3',
-  'son-21.mp3',
-  'son-22.mp3',
-  'son-23.mp3',
-  'son-24.mp3',
-  'son-25.mp3',
-  'son-26.mp3',
-  'son-27.mp3',
-  'son-28.mp3',
-  'son-29.mp3',
-  'son-30.mp3',
-  'son-31.mp3',
-  'son-32.mp3',
-  'son-33.mp3',
-  'son-34.mp3',
-  'son-35.mp3',
-  'son-36.mp3',
-  'son-37.mp3',
-  'son-38.mp3',
+  'son-01.m4a',
+  'son-02.m4a',
+  'son-03.m4a',
+  'son-04.m4a',
+  'son-05.m4a',
+  'son-06.m4a',
+  'son-07.m4a',
+  'son-08.m4a',
+  'son-09.m4a',
+  'son-10.m4a',
+  'son-11.m4a',
+  'son-12.m4a',
+  'son-13.m4a',
+  'son-14.m4a',
+  'son-15.m4a',
+  'son-16.m4a',
+  'son-17.m4a',
+  'son-18.m4a',
+  'son-19.m4a',
+  'son-20.m4a',
+  'son-21.m4a',
+  'son-22.m4a',
+  'son-23.m4a',
+  'son-24.m4a',
+  'son-25.m4a',
+  'son-26.m4a',
+  'son-27.m4a',
+  'son-28.m4a',
+  'son-29.m4a',
+  'son-30.m4a',
+  'son-31.m4a',
+  'son-32.m4a',
+  'son-33.m4a',
+  'son-34.m4a',
+  'son-35.m4a',
+  'son-36.m4a',
+  'son-37.m4a',
+  'son-38.m4a',
 ];
 
 export const SOUND_MANIFEST = {
   Z: POT,
   Z_PLUS: POT,
   PENALTY: POT,
-  VICTORY: ['victoire-01.mp3', 'victoire-02.mp3'],
+  VICTORY: ['victoire-01.m4a', 'victoire-02.m4a'],
 };
 
 export const MANIFESTES = {
@@ -151,19 +151,37 @@ export function allFiles(manifest = null) {
 // ---------------------------------------------------------------------------
 
 const BASE = 'sons/';
-const elements = new Map();
-let unlocked = false;
-let enCours = null;   // canal unique : un seul son audible a la fois
 
-/** Cree les elements et les precharge. A appeler une seule fois au demarrage. */
-export function preload(manifest = null) {
-  for (const file of allFiles(manifest)) {
-    if (elements.has(file)) continue;
-    const el = new Audio(BASE + file);
-    el.preload = 'auto';
-    el.load();
-    elements.set(file, el);
+// Un SEUL element <audio>, reutilise pour tous les sons.
+//
+// Avant le lot 19, il y avait un element par fichier, soit 26, et le
+// deverrouillage n'en touchait qu'un : le premier. Or iOS attache
+// l'autorisation de lecture a L'ELEMENT, pas a l'application. Les vingt-cinq
+// autres restaient donc muets, et le defaut etait invisible depuis un
+// ordinateur, ou tout joue sans rien demander.
+//
+// Un seul element regle aussi le reste : le canal unique devient gratuit,
+// puisqu'il n'y a qu'une voix possible, et la limite d'elements audio d'iOS
+// ne peut plus etre atteinte. Les fichiers sont deja dans le cache du
+// service worker : changer la source ne declenche aucun telechargement.
+let canal = null;
+let unlocked = false;
+
+// 0,02 seconde de silence, 204 octets, ecrit dans la page : le deverrouillage
+// ne depend d'aucun fichier, donc il ne peut pas echouer faute de reseau.
+const SILENCE = 'data:audio/wav;base64,UklGRsQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YaAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA';
+
+function leCanal() {
+  if (!canal) {
+    canal = new Audio();
+    canal.preload = 'auto';
   }
+  return canal;
+}
+
+/** Prepare le canal. A appeler une seule fois au demarrage. */
+export function preload() {
+  leCanal();
 }
 
 /**
@@ -172,14 +190,14 @@ export function preload(manifest = null) {
  */
 export async function unlock() {
   if (unlocked) return true;
-  const first = elements.values().next().value;
-  if (!first) return false;
+  const el = leCanal();
   try {
-    first.muted = true;
-    await first.play();
-    first.pause();
-    first.currentTime = 0;
-    first.muted = false;
+    el.src = SILENCE;
+    el.muted = true;
+    await el.play();
+    el.pause();
+    el.currentTime = 0;
+    el.muted = false;
     unlocked = true;
   } catch {
     unlocked = false;
@@ -194,21 +212,20 @@ export async function unlock() {
 export function play(picker, event) {
   try {
     const file = picker.pick(event);
-    const el = elements.get(file);
-    if (!el) return false;
-    // Deuxieme garde-fou, independante de l'echelle de priorite : meme si deux
-    // appels arrivent (double tap, sequence rapide), le son precedent est coupe
-    // net. Jamais deux voix en meme temps autour d'une table.
-    if (enCours && enCours !== el) {
-      enCours.pause();
-      enCours.currentTime = 0;
-    }
-    enCours = el;
-    el.currentTime = 0;
+    const el = leCanal();
+    // Une seule voix : la source precedente est remplacee, quoi qu'il arrive.
+    el.pause();
+    el.src = BASE + file;
     const p = el.play();
     if (p && typeof p.catch === 'function') p.catch(() => {});
     return true;
   } catch {
     return false;
   }
+}
+
+/** Pour les tests : remet le module dans l'etat d'un demarrage. */
+export function _reset() {
+  canal = null;
+  unlocked = false;
 }
